@@ -1,0 +1,11 @@
+
+AllowShortBlocksOnASingleLine: false
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AllowShortLambdasOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+BasedOnStyle: LLVM
+BreakBeforeBraces: Attach
+BreakTemplateDeclarations: Yes
+ColumnLimit: 100
+IndentWidth: 4
