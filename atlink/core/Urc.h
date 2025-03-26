@@ -24,24 +24,30 @@
 
 namespace ATL {
 
-
 template <typename... Urcs> class UrcParser {
   static_assert((std::is_base_of<AResponse, Urcs>::value && ...),
                 "all URC shall be a Response packet");
 
-  std::variant<Urcs...> variants{};
+  std::variant<std::monostate, Urcs...> variant{};
 
 public:
   UrcParser() = default;
 
-  std::variant<Urcs...> accept(ATL::AInputVisitor& visitor) {
+  std::variant<Urcs...> accept(ATL::AInputVisitor &visitor) {
+
     return std::visit(
         [&visitor](auto &&arg) -> std::variant<Urcs...> {
           arg.accept(visitor);
           return std::variant<Urcs...>{};
         },
-        variants);
+        variant);
   }
+
+  bool isValid() const {
+    return std::holds_alternative<std::monostate>(variant);
+  }
+
+  std::variant<Urcs...> get() const { return variant; }
 };
 
 } // namespace ATL

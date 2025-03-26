@@ -1,1 +1,3 @@
 examples/linux/build/**
+examples/linux/.cache/**
+.vscode/**

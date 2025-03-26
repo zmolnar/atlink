@@ -15,20 +15,9 @@
 //  along with ATLink.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-#ifndef ATLINK_H
-#define ATLINK_H
+#ifndef SERIALIZER_H
+#define SERIALIZER_H
 
-#include "Response.h"
-#include "Command.h"
-#include "Urc.h"
 
-namespace ATL {
 
-class ATLink {
-
-  
-};
-
-}
-
-#endif // ATLINK_H
+#endif

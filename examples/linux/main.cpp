@@ -39,16 +39,42 @@ public:
 };
 
 class Deserializer : public ATL::AInputVisitor {
+  std::ostringstream output{};
+
+  template <typename T> void visitImpl(T &&value) { output << value << ","; }
+
 public:
-  void visit(const ATL::Tag &tag) override { std::cout << tag.asStr(); }
 
-  void visit(const ATL::Term &term) override { std::cout << std::endl; }
+  const std::string get() const { return output.str(); }
 
-  void visit(const char *str) override {}
+  bool visit(const ATL::Tag &tag) override {
+    output << tag.asStr();
+    return false;
+  }
 
-  void visit(int i) override {}
+  bool visit(const ATL::Term &term) override {
+    auto str = output.str();
+    str.pop_back();
+    output.clear();
+    output.str("");
+    output << str << "\r\n";
+    return true;
+  }
 
-  void visit(ATL::AEnum &e) override {}
+  bool visit(const char *str) override {
+    visitImpl(str);
+    return true;
+  }
+
+  bool visit(int i) override {
+    visitImpl(i);
+    return true;
+  }
+
+  bool visit(ATL::AEnum &e) override {
+    output << "," << e.asInt() << ":" << e.asStr();
+    return true;
+  }
 
   ~Deserializer() = default;
 };
@@ -74,6 +100,6 @@ int main() {
     auto deser = Deserializer{};
     auto cpinReadResponse = ATL::Proto::Std::CpinReadResponse{};
     cpinReadResponse.accept(deser);
-    parser.accept(deser);
+    std::cout << deser.get() << std::endl;
   }
 }

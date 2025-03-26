@@ -29,6 +29,7 @@
     accept(visitor, tag, term);                                                \
   }
 
+// TODO: handle zero arguments and remove the macro above
 #define REFLECT_COMMAND(...)                                                   \
   template <typename... Args>                                                  \
   void accept(ATL::AOutputVisitor &visitor, Args &&... args) const {           \
