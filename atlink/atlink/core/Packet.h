@@ -20,6 +20,7 @@
 #include "Types.h"
 
 namespace ATL_NS {
+namespace Core {
 
 class AOutputVisitor {
   public:
@@ -64,4 +65,5 @@ class APacket {
     }
 };
 
+} // namespace Core
 } // namespace ATL_NS

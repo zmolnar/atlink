@@ -1,16 +1,19 @@
 cmake_minimum_required(VERSION 3.20)
 project(atlink_tests LANGUAGES C CXX)
 
-find_package(atlink CONFIG REQUIRED)
+set(CMAKE_CXX_FLAGS_DEBUG "-g")
+set(CMAKE_C_FLAGS_DEBUG "-g")
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 find_package(Catch2 3 REQUIRED)
 
 enable_testing()
 
-set(CMAKE_CXX_FLAGS_DEBUG "-g")
-set(CMAKE_C_FLAGS_DEBUG "-g")
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+# Use atlink sources directly via add_subdirectory
+add_subdirectory(../atlink atlink_build)
+
 add_executable(atlink_tests
-    utTypes.cpp
+    utEnumStringConverter.cpp
 )
 
 target_link_libraries(atlink_tests PRIVATE atlink::atlink Catch2::Catch2WithMain)

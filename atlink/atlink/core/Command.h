@@ -20,6 +20,7 @@
 #include <atlink/core/Packet.h>
 
 namespace ATL_NS {
+namespace Core {
 
 class ACommand : public APacket {
   public:
@@ -28,4 +29,5 @@ class ACommand : public APacket {
     virtual ~ACommand() = default;
 };
 
+} // namespace Core
 } // namespace ATL_NS

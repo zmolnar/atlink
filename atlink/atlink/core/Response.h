@@ -23,6 +23,7 @@
 #include <atlink/core/Packet.h>
 
 namespace ATL_NS {
+namespace Core {
 
 class AResponse : public APacket {
   public:
@@ -31,4 +32,5 @@ class AResponse : public APacket {
     virtual ~AResponse() = default;
 };
 
+} // namespace Core
 } // namespace ATL_NS

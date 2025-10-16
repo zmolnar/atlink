@@ -20,6 +20,7 @@
 #include <atlink/core/Types.h>
 
 namespace ATL_NS {
+namespace Core {
 
 // Forward declaration of EnumTraits
 template <typename T>
@@ -85,4 +86,5 @@ bool operator!=(T lhs, const Enum<T> &rhs) {
     return lhs != rhs.value();
 }
 
+} // namespace Core
 } // namespace ATL_NS

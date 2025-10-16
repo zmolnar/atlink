@@ -1,11 +1,14 @@
-
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
 AllowShortBlocksOnASingleLine: false
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
 AllowShortLambdasOnASingleLine: false
 AllowShortFunctionsOnASingleLine: Empty
 BasedOnStyle: LLVM
+BinPackArguments: false
+BinPackParameters: false
 BreakBeforeBraces: Attach
 BreakTemplateDeclarations: Yes
-ColumnLimit: 100
+ColumnLimit: 80
 IndentWidth: 4

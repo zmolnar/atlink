@@ -18,6 +18,7 @@
 #pragma once
 
 namespace ATL_NS {
+namespace Core {
 
 class Tag {
     const char *str;
@@ -39,4 +40,5 @@ class AEnum {
     virtual ~AEnum() = default;
 };
 
+} // namespace Core
 } // namespace ATL_NS
