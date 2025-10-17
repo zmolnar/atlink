@@ -26,24 +26,24 @@ namespace ATL_NS {
 namespace Proto {
 namespace Std {
 
-class CpinRead : public ATL_NS::ACommand {
+class CpinRead : public Core::ACommand {
   public:
-    CpinRead() : ATL_NS::ACommand("+CPIN? ") {}
-    void accept(ATL_NS::AOutputVisitor &visitor) const override {
+    CpinRead() : Core::ACommand("+CPIN? ") {}
+    void accept(Core::AOutputVisitor &visitor) const override {
         APacket::accept(visitor);
     }
 };
 
-class CpinWrite : public ATL_NS::ACommand {
+class CpinWrite : public Core::ACommand {
   public:
-    CpinWrite() : ATL_NS::ACommand("+CPIN=") {}
+    CpinWrite() : Core::ACommand("+CPIN=") {}
     int pin;
-    void accept(ATL_NS::AOutputVisitor &visitor) const override {
+    void accept(Core::AOutputVisitor &visitor) const override {
         APacket::accept(visitor, pin);
     }
 };
 
-class CpinReadResponse : public ATL_NS::AResponse {
+class CpinReadResponse : public Core::AResponse {
   public:
     enum class Code {
         READY,
@@ -55,11 +55,11 @@ class CpinReadResponse : public ATL_NS::AResponse {
         SIM_PUK2,
     };
 
-    ATL_NS::Enum<Code> code;
+    Core::Enum<Code> code;
 
-    CpinReadResponse() : ATL_NS::AResponse("+CPIN: ") {}
+    CpinReadResponse() : Core::AResponse("+CPIN: ") {}
     ~CpinReadResponse() = default;
-    void accept(ATL_NS::AInputVisitor &visitor) override {
+    void accept(Core::AInputVisitor &visitor) override {
         APacket::accept(visitor, code);
     }
 };
@@ -69,46 +69,14 @@ class CpinReadResponse : public ATL_NS::AResponse {
 } // namespace ATL_NS
 
 template <>
-struct ATL_NS::EnumTraits<ATL_NS::Proto::Std::CpinReadResponse::Code> {
-    static const char *toString(ATL_NS::Proto::Std::CpinReadResponse::Code value) {
-        switch (value) {
-        case ATL_NS::Proto::Std::CpinReadResponse::Code::READY:
-            return "READY";
-        case ATL_NS::Proto::Std::CpinReadResponse::Code::SIM_PIN:
-            return "SIM PIN";
-        case ATL_NS::Proto::Std::CpinReadResponse::Code::SIM_PUK:
-            return "SIM PUK";
-        case ATL_NS::Proto::Std::CpinReadResponse::Code::PH_SIM_PIN:
-            return "PH_SIM PIN";
-        case ATL_NS::Proto::Std::CpinReadResponse::Code::PH_SIM_PUK:
-            return "PH_SIM PUK";
-        case ATL_NS::Proto::Std::CpinReadResponse::Code::SIM_PIN2:
-            return "SIM PIN2";
-        case ATL_NS::Proto::Std::CpinReadResponse::Code::SIM_PUK2:
-            return "SIM PUK2";
-        default:
-            return "";
-        }
+struct ATL_NS::Core::EnumTraits<ATL_NS::Proto::Std::CpinReadResponse::Code> {
+    using Code = ATL_NS::Proto::Std::CpinReadResponse::Code;
+    static size_t stringify(Code value, gsl::span<char> output) {
+        return 0;
     }
 
-    static std::optional<ATL_NS::Proto::Std::CpinReadResponse::Code> fromString(const char *str) {
-        if (0 == std::strncmp(str, "READY", 5)) {
-            return ATL_NS::Proto::Std::CpinReadResponse::Code::READY;
-        } else if (0 == std::strncmp(str, "SIM PIN", 7)) {
-            return ATL_NS::Proto::Std::CpinReadResponse::Code::SIM_PIN;
-        } else if (0 == std::strncmp(str, "SIM PUK", 7)) {
-            return ATL_NS::Proto::Std::CpinReadResponse::Code::SIM_PUK;
-        } else if (0 == std::strncmp(str, "PH_SIM PIN", 10)) {
-            return ATL_NS::Proto::Std::CpinReadResponse::Code::PH_SIM_PIN;
-        } else if (0 == std::strncmp(str, "PH_SIM PUK", 10)) {
-            return ATL_NS::Proto::Std::CpinReadResponse::Code::PH_SIM_PUK;
-        } else if (0 == std::strncmp(str, "SIM PIN2", 8)) {
-            return ATL_NS::Proto::Std::CpinReadResponse::Code::SIM_PIN2;
-        } else if (0 == std::strncmp(str, "SIM PUK2", 8)) {
-            return ATL_NS::Proto::Std::CpinReadResponse::Code::SIM_PUK2;
-        } else {
-            return std::nullopt;
-        }
+    static size_t parse(Code &value, const gsl::span<const char> input) {
+        return 0;
     }
 };
 

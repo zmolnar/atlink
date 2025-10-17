@@ -18,8 +18,6 @@
 #pragma once
 
 #include <array>
-#include <optional>
-#include <string_view>
 
 #include "atlink/core/Enum.h"
 #include "atlink/core/Response.h"
@@ -368,9 +366,11 @@ class CmeError : public Core::AResponse {
             Record{"7", Code::PhFsimPuk}};
 
         static_assert(Utils::isStrictlySortedByString(map),
-                      "CmeError map must be sorted by string and shall not contain duplicates!");
+                      "CmeError map must be sorted by string and shall not "
+                      "contain duplicates!");
 
-        inline static constexpr auto converter = Utils::EnumStringConverter{map};
+        inline static constexpr auto converter =
+            Utils::EnumStringConverter{map};
     };
 
     Core::Enum<Code> code{};
@@ -388,13 +388,13 @@ class CmeError : public Core::AResponse {
 
 template <>
 struct ATL_NS::Core::EnumTraits<ATL_NS::Proto::Std::CmeError::Code> {
-    using Code = Proto::Std::CmeError::Code;
+    using CmeError = Proto::Std::CmeError;
 
-    static constexpr const char *toString(Code value) {
-        return Proto::Std::CmeError::Details::converter.toString(value).data();
+    static size_t stringify(CmeError::Code value, MutableBuffer output) {
+        return CmeError::Details::converter.stringify(value, output);
     }
 
-    static std::optional<Code> fromString(const char *str) {
-        return Proto::Std::CmeError::Details::converter.fromString(str);
+    static size_t parse(CmeError::Code &value, ReadOnlyText input) {
+        return CmeError::Details::converter.parse(value, input);
     }
 };

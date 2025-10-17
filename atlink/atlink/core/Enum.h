@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include <atlink/core/Types.h>
+#include "atlink/core/Types.h"
 
 namespace ATL_NS {
 namespace Core {
@@ -25,8 +25,8 @@ namespace Core {
 // Forward declaration of EnumTraits
 template <typename T>
 struct EnumTraits {
-    static const char *toString(T value) = delete;
-    static std::optional<T> fromString(const char *str) = delete;
+    static size_t stringify(T value, MutableBuffer output) = delete;
+    static size_t parse(T& value, ReadOnlyText input) = delete;
 };
 
 template <typename T>
@@ -63,16 +63,12 @@ class Enum : public AEnum {
         return value != other;
     }
 
-    const char *asStr() const override {
-        return EnumTraits<T>::toString(value);
+    size_t stringify(MutableBuffer output) const override {
+        return EnumTraits<T>::stringify(value, output);
     }
 
-    bool fromStr(const char *str) override {
-        auto optValue = EnumTraits<T>::fromString(str);
-        if (optValue) {
-            value = *optValue;
-        }
-        return optValue.has_value();
+    size_t parse(ReadOnlyText input) override {
+        return EnumTraits<T>::parse(value, input);
     }
 };
 

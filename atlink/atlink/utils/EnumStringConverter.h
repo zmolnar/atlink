@@ -21,7 +21,8 @@
 #include <array>
 #include <cassert>
 #include <optional>
-#include <string_view>
+
+#include "atlink/core/Types.h"
 
 namespace ATL_NS {
 namespace Utils {
@@ -29,12 +30,33 @@ namespace Utils {
 template <typename T, size_t N>
 class EnumStringConverter {
   public:
-    using Record = std::pair<std::string_view, T>;
+    using Record = std::pair<ATL_NS::Core::ReadOnlyText, T>;
     using Map = std::array<Record, N>;
 
     constexpr EnumStringConverter(const Map &map) : map{map} {}
 
-    constexpr std::string_view toString(T variant) const {
+    constexpr size_t stringify(T value,
+                               ATL_NS::Core::MutableBuffer output) const {
+        auto str = toString(value);
+        size_t n = 0;
+        if (str.size() < output.size()) {
+            n = str.size();
+            std::copy_n(str.data(), str.size(), output.data());
+        }
+        return n;
+    }
+
+    constexpr size_t parse(T &value, ATL_NS::Core::ReadOnlyText input) const {
+        size_t n = 0U;
+        auto result = fromString(input);
+        if (result) {
+            value = result.value();
+            n = toString(value).size();
+        }
+        return n;
+    }
+
+    constexpr ATL_NS::Core::ReadOnlyText toString(T variant) const {
         auto matcher = [variant](const Record &i) {
             return i.second == variant;
         };

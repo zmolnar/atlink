@@ -17,8 +17,14 @@
 
 #pragma once
 
+#include <gsl/span>
+#include <string_view>
+
 namespace ATL_NS {
 namespace Core {
+
+using ReadOnlyText = std::string_view;
+using MutableBuffer = gsl::span<char>;
 
 class Tag {
     const char *str;
@@ -34,9 +40,8 @@ class Term {};
 
 class AEnum {
   public:
-    // virtual int32_t asInt() const = 0;
-    virtual const char *asStr() const = 0;
-    virtual bool fromStr(const char *str) = 0;
+    virtual size_t stringify(MutableBuffer output) const = 0;
+    virtual size_t parse(ReadOnlyText input) = 0;
     virtual ~AEnum() = default;
 };
 

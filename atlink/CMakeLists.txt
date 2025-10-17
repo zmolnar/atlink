@@ -4,6 +4,17 @@ project(atlink VERSION 0.1.0 LANGUAGES C CXX)
 # User-tweakable API namespace (propagated to consumers)
 set(ATLINK_NAMESPACE "atlink" CACHE STRING "Atlink top-level enclosing namespace")
 
+include(FetchContent)
+
+FetchContent_Declare(
+    GSL
+    GIT_REPOSITORY https://github.com/microsoft/GSL.git
+    GIT_TAG        v4.0.0
+    FIND_PACKAGE_ARGS NAMES Microsoft.GSL
+)
+
+FetchContent_MakeAvailable(gsl)
+
 # Header-only library target
 add_library(atlink INTERFACE)
 add_library(atlink::atlink ALIAS atlink)
@@ -20,6 +31,11 @@ target_compile_definitions(atlink
     INTERFACE ATL_NS=${ATLINK_NAMESPACE}
 )
 
+target_link_libraries(atlink
+    INTERFACE 
+        Microsoft.GSL::GSL
+)
+
 # Require C++17 for consumers
 target_compile_features(atlink INTERFACE cxx_std_17)
 
@@ -30,7 +46,7 @@ include(CMakePackageConfigHelpers)
 install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/atlink DESTINATION include)
 
 # Install/export the INTERFACE target
-install(TARGETS atlink
+install(TARGETS atlink GSL
     EXPORT atlinkTargets
 )
 
