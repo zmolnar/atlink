@@ -10,5 +10,5 @@ BinPackArguments: false
 BinPackParameters: false
 BreakBeforeBraces: Attach
 BreakTemplateDeclarations: Yes
-ColumnLimit: 80
+ColumnLimit: 100
 IndentWidth: 4
