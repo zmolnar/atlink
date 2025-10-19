@@ -7,13 +7,20 @@ set(ATLINK_NAMESPACE "atlink" CACHE STRING "Atlink top-level enclosing namespace
 include(FetchContent)
 
 FetchContent_Declare(
+    magic_enum
+    GIT_REPOSITORY https://github.com/Neargye/magic_enum.git
+    GIT_TAG        v0.9.7
+    FIND_PACKAGE_ARGS NAMES magic_enum
+)
+
+FetchContent_Declare(
     GSL
     GIT_REPOSITORY https://github.com/microsoft/GSL.git
     GIT_TAG        v4.0.0
     FIND_PACKAGE_ARGS NAMES Microsoft.GSL
 )
 
-FetchContent_MakeAvailable(gsl)
+FetchContent_MakeAvailable(magic_enum gsl)
 
 # Header-only library target
 add_library(atlink INTERFACE)
@@ -28,11 +35,15 @@ target_include_directories(atlink
 
 # Public compile definitions (seen by dependents)
 target_compile_definitions(atlink
-    INTERFACE ATL_NS=${ATLINK_NAMESPACE}
+    INTERFACE 
+        ATL_NS=${ATLINK_NAMESPACE}
+        MAGIC_ENUM_RANGE_MIN=0
+        MAGIC_ENUM_RANGE_MAX=1024
 )
 
 target_link_libraries(atlink
     INTERFACE 
+        magic_enum::magic_enum
         Microsoft.GSL::GSL
 )
 
@@ -46,7 +57,7 @@ include(CMakePackageConfigHelpers)
 install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/atlink DESTINATION include)
 
 # Install/export the INTERFACE target
-install(TARGETS atlink GSL
+install(TARGETS atlink magic_enum GSL
     EXPORT atlinkTargets
 )
 

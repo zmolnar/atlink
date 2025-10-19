@@ -15,12 +15,12 @@
 //  along with ATLink.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-#ifndef CPIN_H
-#define CPIN_H
+#pragma once
 
 #include <atlink/core/Command.h>
 #include <atlink/core/Enum.h>
 #include <atlink/core/Response.h>
+#include <atlink/utils/EnumStringConverter.h>
 
 namespace ATL_NS {
 namespace Proto {
@@ -46,13 +46,13 @@ class CpinWrite : public Core::ACommand {
 class CpinReadResponse : public Core::AResponse {
   public:
     enum class Code {
-        READY,
-        SIM_PIN,
-        SIM_PUK,
-        PH_SIM_PIN,
-        PH_SIM_PUK,
-        SIM_PIN2,
-        SIM_PUK2,
+        Ready,
+        SimPin,
+        SimPuk,
+        PhSimPin,
+        PhSimPuk,
+        PhSimPin2,
+        PhSimPuk2,
     };
 
     Core::Enum<Code> code;
@@ -71,13 +71,30 @@ class CpinReadResponse : public Core::AResponse {
 template <>
 struct ATL_NS::Core::EnumTraits<ATL_NS::Proto::Std::CpinReadResponse::Code> {
     using Code = ATL_NS::Proto::Std::CpinReadResponse::Code;
-    static size_t stringify(Code value, gsl::span<char> output) {
-        return 0;
+    using Record = Utils::EnumCustomStringRecord<Code>;
+
+    static constexpr std::array map = {
+        Record{"PH_SIM_PIN", Code::PhSimPin},
+        Record{"PH_SIM_PUK", Code::PhSimPuk},
+        Record{"READY", Code::Ready},
+        Record{"SIM_PIN", Code::SimPin},
+        Record{"SIM_PIN2", Code::PhSimPin2},
+        Record{"SIM_PUK", Code::SimPuk},
+        Record{"SIM_PUK2", Code::PhSimPuk2},
+    };
+
+    static_assert(Utils::isStrictlySortedByString(map),
+                  "CPIN response map shall be ordered by string");
+
+    template <size_t N>
+    using Converter = Utils::EnumCustomStringConverter<Code, N>;
+    inline static constexpr auto converter = Converter{map};
+
+    static size_t stringify(Code value, MutableBuffer output) {
+        return converter.stringify(value, output);
     }
 
-    static size_t parse(Code &value, const gsl::span<const char> input) {
-        return 0;
+    static size_t parse(Code &value, ReadOnlyText input) {
+        return converter.parse(value, input);
     }
 };
-
-#endif // CPIN_H

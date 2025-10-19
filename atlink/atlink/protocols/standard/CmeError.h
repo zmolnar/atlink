@@ -17,8 +17,6 @@
 
 #pragma once
 
-#include <array>
-
 #include "atlink/core/Enum.h"
 #include "atlink/core/Response.h"
 #include "atlink/utils/EnumStringConverter.h"
@@ -196,183 +194,6 @@ class CmeError : public Core::AResponse {
         WirelineAccessAreaNotAllowed = 233,
     };
 
-    class Details {
-      public:
-        using Record = Utils::EnumStringRecord<Code>;
-
-        inline static constexpr std::array map = {
-            Record{"0", Code::PhoneFailure},
-            Record{"1", Code::NoConnection},
-            Record{"10", Code::SimNotInserted},
-            Record{"100", Code::Unknown},
-            Record{"102", Code::ImsiUnknownInHss},
-            Record{"103", Code::IllegalUe},
-            Record{"104", Code::ImsiUnknownInVlr},
-            Record{"105", Code::ImeiNotAccepted},
-            Record{"106", Code::IllegalMe},
-            Record{"107", Code::PsServicesNotAllowed},
-            Record{"108", Code::PsAndNonPsServicesNotAllowed},
-            Record{"109", Code::UeIdentityNotDerivedFromNetwork},
-            Record{"11", Code::SimPin},
-            Record{"110", Code::ImplicitlyDetached},
-            Record{"111", Code::PlmnNotAllowed},
-            Record{"112", Code::AreaNotAllowed},
-            Record{"113", Code::RoamingNotAllowedInArea},
-            Record{"114", Code::PsServicesNotAllowedInPlmn},
-            Record{"115", Code::NoCellsInArea},
-            Record{"116", Code::MscTemporarilyNotReachable},
-            Record{"117", Code::NetworkFailureAttach},
-            Record{"118", Code::CsDomainUnavailable},
-            Record{"119", Code::EsmFailure},
-            Record{"12", Code::SimPuk},
-            Record{"122", Code::Congestion},
-            Record{"124", Code::MbmsBearerCapabilitiesInsufficientForService},
-            Record{"125", Code::NotAuthorizedForCsg},
-            Record{"126", Code::InsufficientResources},
-            Record{"127", Code::MissingOrUnknownApn},
-            Record{"128", Code::UnknownPdpAddressOrType},
-            Record{"129", Code::UserAuthenticationFailed},
-            Record{"13", Code::SimFailure},
-            Record{"130", Code::ActivationRejectedByGgsnOrGw},
-            Record{"131", Code::ActivationRejectedUnspecified},
-            Record{"132", Code::ServiceOptionNotSupported},
-            Record{"133", Code::ServiceOptionNotSubscribed},
-            Record{"134", Code::ServiceOptionOutOfOrder},
-            Record{"135", Code::NsapiOrPtiAlreadyInUse},
-            Record{"136", Code::RegularDeactivation},
-            Record{"137", Code::QosNotAccepted},
-            Record{"138", Code::CallCannotBeIdentified},
-            Record{"139", Code::CsServiceTemporarilyUnavailable},
-            Record{"14", Code::SimBusy},
-            Record{"140", Code::FeatureNotSupported},
-            Record{"141", Code::SemanticErrorInTftOperation},
-            Record{"142", Code::SyntacticalErrorInTftOperation},
-            Record{"143", Code::UnknownPdpContext},
-            Record{"144", Code::SemanticErrorsInPacketFilter},
-            Record{"145", Code::SyntacticalErrorInPacketFilter},
-            Record{"146", Code::PdpContextWithoutTftAlreadyActivated},
-            Record{"147", Code::MulticastGroupMembershipTimeout},
-            Record{"148", Code::GprsUnknown},
-            Record{"149", Code::PdpAuthFailure},
-            Record{"15", Code::SimWrong},
-            Record{"150", Code::InvalidMobileClass},
-            Record{"151", Code::LastPdnDisconnectionNotAllowedLegacy},
-            Record{"16", Code::IncorrectPassword},
-            Record{"17", Code::SimPin2},
-            Record{"171", Code::LastPdnDisconnectionNotAllowed},
-            Record{"172", Code::SemanticallyIncorrectMessage},
-            Record{"173", Code::InvalidMandatoryInformation},
-            Record{"174", Code::MessageTypeNotImplemented},
-            Record{"175", Code::ConditionalIeError},
-            Record{"176", Code::UnspecifiedProtocolError},
-            Record{"177", Code::OperatorDeterminedBarring},
-            Record{"178", Code::MaximumNumberOfBearersReached},
-            Record{"179", Code::RequestedApnNotSupported},
-            Record{"18", Code::SimPuk2},
-            Record{"180", Code::RequestRejectedBcmViolation},
-            Record{"181", Code::UnsupportedQciOr5QiValue},
-            Record{"182", Code::UserDataViaControlPlaneCongested},
-            Record{"183", Code::SmsProvidedViaGprsInRoutingArea},
-            Record{"184", Code::InvalidPtiValue},
-            Record{"185", Code::NoBearerActivated},
-            Record{"186", Code::MessageNotCompatibleWithProtocolState},
-            Record{"187", Code::RecoveryOnTimerExpiry},
-            Record{"188", Code::InvalidTransactionIdValue},
-            Record{"189", Code::ServiceOptionNotAuthorizedInPlmn},
-            Record{"190", Code::NetworkFailureActivation},
-            Record{"191", Code::ReactivationRequested},
-            Record{"192", Code::Ipv4OnlyAllowed},
-            Record{"193", Code::Ipv6OnlyAllowed},
-            Record{"194", Code::SingleAddressBearersOnlyAllowed},
-            Record{"195", Code::CollisionWithNetworkInitiatedRequest},
-            Record{"196", Code::Ipv4V6OnlyAllowed},
-            Record{"197", Code::NonIpOnlyAllowed},
-            Record{"198", Code::BearerHandlingUnsupported},
-            Record{"199", Code::ApnRestrictionIncompatible},
-            Record{"2", Code::LinkReserved},
-            Record{"20", Code::MemoryFull},
-            Record{"200", Code::MultipleAccessToPdnConnectionNotAllowed},
-            Record{"201", Code::EsmInformationNotReceived},
-            Record{"202", Code::PdnConnectionNonexistent},
-            Record{"203", Code::MultiplePdnConnectionSameApnNotAllowed},
-            Record{"204", Code::SevereNetworkFailure},
-            Record{"205", Code::InsufficientResourcesForSliceAndDnn},
-            Record{"206", Code::UnsupportedSscMode},
-            Record{"207", Code::InsufficientResourcesForSlice},
-            Record{"208", Code::MessageTypeNotCompatibleWithProtocolState},
-            Record{"209", Code::IeNotImplemented},
-            Record{"21", Code::InvalidIndex},
-            Record{"210", Code::N1ModeNotAllowed},
-            Record{"211", Code::RestrictedServiceArea},
-            Record{"212", Code::LadnUnavailable},
-            Record{"213", Code::MissingOrUnknownDnnInSlice},
-            Record{"214", Code::NgksiAlreadyInUse},
-            Record{"215", Code::PayloadNotForwarded},
-            Record{"216", Code::Non3GppAccessTo5GcnNotAllowed},
-            Record{"217", Code::ServingNetworkNotAuthorized},
-            Record{"218", Code::DnnNotSupportedInSlice},
-            Record{"219", Code::InsufficientUserPlaneResourcesForPduSessio},
-            Record{"22", Code::NotFound},
-            Record{"220", Code::OutOfLadnServiceArea},
-            Record{"221", Code::PtiMismatch},
-            Record{"222", Code::MaxDataRateForUserPlaneIntegrityTooLow},
-            Record{"223", Code::SemanticErrorInQosOperation},
-            Record{"224", Code::SyntacticalErrorInQosOperation},
-            Record{"225", Code::InvalidMappedEpsBearerIdentity},
-            Record{"226", Code::RedirectionTo5GcnRequired},
-            Record{"227", Code::RedirectionToEpcRequired},
-            Record{"228", Code::TemporarilyUnauthorizedForSnpn},
-            Record{"229", Code::PermanentlyUnauthorizedForSnpn},
-            Record{"23", Code::MemoryFailure},
-            Record{"230", Code::EthernetOnlyAllowed},
-            Record{"231", Code::UnauthorizedForCag},
-            Record{"232", Code::NoNetworkSlicesAvailable},
-            Record{"233", Code::WirelineAccessAreaNotAllowed},
-            Record{"24", Code::TextTooLong},
-            Record{"25", Code::InvalidChars},
-            Record{"26", Code::DialStringTooLong},
-            Record{"27", Code::DialStringInvalid},
-            Record{"3", Code::NotAllowed},
-            Record{"30", Code::NoNetwork},
-            Record{"31", Code::NetworkTimeout},
-            Record{"32", Code::NetworkNotAllowed},
-            Record{"4", Code::NotSupported},
-            Record{"40", Code::NetworkPin},
-            Record{"41", Code::NetworkPuk},
-            Record{"42", Code::NetworkSubsetPin},
-            Record{"43", Code::NetworkSubsetPuk},
-            Record{"44", Code::ServicePin},
-            Record{"45", Code::ServicePuk},
-            Record{"46", Code::CorpPin},
-            Record{"47", Code::CorpPuk},
-            Record{"48", Code::HiddenKeyRequired},
-            Record{"49", Code::EapMethodNotSupported},
-            Record{"5", Code::PhSimPin},
-            Record{"50", Code::IncorrectParameters},
-            Record{"51", Code::CommandDisabled},
-            Record{"52", Code::CommandAborted},
-            Record{"53", Code::NotAttachedRestricted},
-            Record{"54", Code::NotAllowedEmergencyOnly},
-            Record{"55", Code::NotAllowedRestricted},
-            Record{"56", Code::FixedDialNumberOnly},
-            Record{"57", Code::TemporarilyOutOfService},
-            Record{"58", Code::LanguageOrAlphabetNotSupported},
-            Record{"59", Code::UnexpectedDataValue},
-            Record{"6", Code::PhFsimPin},
-            Record{"60", Code::SystemFailure},
-            Record{"61", Code::DataMissing},
-            Record{"62", Code::CallBarred},
-            Record{"63", Code::MessageWaitingIndicationSubscriptionFailure},
-            Record{"7", Code::PhFsimPuk}};
-
-        static_assert(Utils::isStrictlySortedByString(map),
-                      "CmeError map must be sorted by string and shall not "
-                      "contain duplicates!");
-
-        inline static constexpr auto converter =
-            Utils::EnumStringConverter{map};
-    };
-
     Core::Enum<Code> code{};
 
     CmeError() : Core::AResponse("+CME ERROR: ") {}
@@ -388,13 +209,16 @@ class CmeError : public Core::AResponse {
 
 template <>
 struct ATL_NS::Core::EnumTraits<ATL_NS::Proto::Std::CmeError::Code> {
-    using CmeError = Proto::Std::CmeError;
+    using Code = Proto::Std::CmeError::Code;
+    using EnumStringConverter = Utils::EnumStringConverter<Code>;
 
-    static size_t stringify(CmeError::Code value, MutableBuffer output) {
-        return CmeError::Details::converter.stringify(value, output);
+    inline static constexpr auto converter = EnumStringConverter{};
+
+    static size_t stringify(Code value, MutableBuffer output) {
+        return converter.stringify(value, output);
     }
 
-    static size_t parse(CmeError::Code &value, ReadOnlyText input) {
-        return CmeError::Details::converter.parse(value, input);
+    static size_t parse(Code &value, ReadOnlyText input) {
+        return converter.parse(value, input);
     }
 };

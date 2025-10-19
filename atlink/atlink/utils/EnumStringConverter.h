@@ -20,6 +20,8 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <charconv>
+#include <magic_enum/magic_enum.hpp>
 #include <optional>
 
 #include "atlink/core/Types.h"
@@ -27,18 +29,62 @@
 namespace ATL_NS {
 namespace Utils {
 
-template <typename T, size_t N>
+template <typename T, size_t N = 0U>
 class EnumStringConverter {
   public:
+    using ReadOnlyText = ATL_NS::Core::ReadOnlyText;
+    using MutableBuffer = ATL_NS::Core::MutableBuffer;
+
+    constexpr EnumStringConverter() = default;
+
+    constexpr size_t stringify(T value, MutableBuffer output) const {
+        static_assert(sizeof(T) <= sizeof(int), "T must not be larger than int");
+
+        auto *first = output.data();
+        auto *last = output.data() + output.size() - 1U;
+        auto num = static_cast<int>(value);
+        auto result = std::to_chars(first, last, num);
+        size_t n = 0U;
+        if (result.ec == std::errc{}) {
+            n = result.ptr - output.data();
+            output[n] = '\0';
+        }
+        return n;
+    }
+
+    constexpr size_t parse(T &value, ReadOnlyText input) const {
+        static_assert(sizeof(T) <= sizeof(int), "T must not be larger than int");
+
+        const auto *first = input.data();
+        const auto *last = input.data() + input.size();
+        int num = 0U;
+        auto result = std::from_chars(first, last, num);
+
+        size_t n = 0U;
+        if (result.ec == std::errc{}) {
+            auto opt_enum = magic_enum::enum_cast<T>(num);
+            if (opt_enum.has_value()) {
+                value = opt_enum.value();
+                n = result.ptr - input.data();
+            }
+        }
+        return n;
+    }
+};
+
+template <typename T, size_t N>
+class EnumCustomStringConverter {
+  public:
+    using ReadOnlyText = ATL_NS::Core::ReadOnlyText;
+    using MutableBuffer = ATL_NS::Core::MutableBuffer;
     using Record = std::pair<ATL_NS::Core::ReadOnlyText, T>;
     using Map = std::array<Record, N>;
 
-    constexpr EnumStringConverter(const Map &map) : map{map} {}
+    constexpr explicit EnumCustomStringConverter(const Map &map) : map{map} {}
 
-    constexpr size_t stringify(T value,
-                               ATL_NS::Core::MutableBuffer output) const {
-        auto str = toString(value);
+    constexpr size_t stringify(T value, MutableBuffer output) const {
         size_t n = 0;
+        auto str = lookup(value);
         if (str.size() < output.size()) {
             n = str.size();
             std::copy_n(str.data(), str.size(), output.data());
@@ -46,17 +92,20 @@ class EnumStringConverter {
         return n;
     }
 
-    constexpr size_t parse(T &value, ATL_NS::Core::ReadOnlyText input) const {
+    constexpr size_t parse(T &value, ReadOnlyText input) const {
         size_t n = 0U;
-        auto result = fromString(input);
+        auto result = lookup(input);
         if (result) {
             value = result.value();
-            n = toString(value).size();
+            n = lookup(value).size();
         }
         return n;
     }
 
-    constexpr ATL_NS::Core::ReadOnlyText toString(T variant) const {
+  private:
+    const Map &map;
+
+    constexpr ReadOnlyText lookup(T variant) const {
         auto matcher = [variant](const Record &i) {
             return i.second == variant;
         };
@@ -65,7 +114,7 @@ class EnumStringConverter {
         return it->first;
     }
 
-    constexpr std::optional<T> fromString(std::string_view str) const {
+    constexpr std::optional<T> lookup(ReadOnlyText str) const {
         if (str.empty())
             return std::nullopt;
 
@@ -82,23 +131,17 @@ class EnumStringConverter {
 
         return std::nullopt;
     }
-
-  private:
-    const Map &map;
 };
 
-// Helper alias to access Record type with just T
 template <typename T>
-using EnumStringRecord = typename EnumStringConverter<T, 1>::Record;
-
-// Deduction guide
-template <typename T, size_t N>
-EnumStringConverter(const std::array<std::pair<std::string_view, T>, N> &)
-    -> EnumStringConverter<T, N>;
+using EnumCustomStringRecord = typename EnumCustomStringConverter<T, 1U>::Record;
 
 template <typename T, size_t N>
-constexpr bool isStrictlySortedByString(
-    const std::array<std::pair<std::string_view, T>, N> &arr) {
+EnumCustomStringConverter(const std::array<std::pair<std::string_view, T>, N> &)
+    -> EnumCustomStringConverter<T, N>;
+
+template <typename T, size_t N>
+constexpr bool isStrictlySortedByString(const std::array<std::pair<std::string_view, T>, N> &arr) {
     if constexpr (N <= 1)
         return true;
 
