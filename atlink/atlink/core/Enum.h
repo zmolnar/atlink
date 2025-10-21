@@ -17,16 +17,66 @@
 
 #pragma once
 
+#include <array>
+#include <string_view>
+#include <tuple>
+#include <type_traits>
+
 #include "atlink/core/Types.h"
+#include "atlink/utils/EnumStringConverter.h"
 
 namespace ATL_NS {
 namespace Core {
 
-// Forward declaration of EnumTraits
+// MapProvider<T>: specialize ONLY for enums that use custom strings.
+// Provide inline static constexpr std::array<Record, N> map = { ... }
+// which contains the string associations.
+// For numeric enums, do nothing — traits will select numeric converter.
+template <typename T, typename = void>
+struct MapProvider;
+
+template <typename T, typename = void>
+struct has_map : std::false_type {};
+
 template <typename T>
-struct EnumTraits {
-    static size_t stringify(T value, MutableBuffer output) = delete;
-    static size_t parse(T& value, ReadOnlyText input) = delete;
+struct has_map<T, std::void_t<decltype(MapProvider<T>::map)>> : std::true_type {};
+
+template <typename T, typename Enable = void>
+struct EnumTraits;
+
+// EnumTraits specialization for enums associated with custom strings
+template <typename T>
+struct EnumTraits<T, std::enable_if_t<has_map<T>::value>> {
+  private:
+    using MapRef = decltype(MapProvider<T>::map);
+    static_assert(Utils::isStrictlySortedByString(MapProvider<T>::map),
+                  "Enum string map must be strictly sorted by key");
+
+    static constexpr std::size_t N = std::tuple_size<MapRef>::value;
+    inline static const Utils::EnumCustomStringConverter<T, N> converter{MapProvider<T>::map};
+
+  public:
+    static size_t stringify(T value, MutableBuffer output) {
+        return converter.stringify(value, output);
+    }
+    static size_t parse(T &value, ReadOnlyText input) {
+        return converter.parse(value, input);
+    }
+};
+
+// EnumTraits specialization for enums represented as numeric strings
+template <typename T>
+struct EnumTraits<T, std::enable_if_t<!has_map<T>::value>> {
+  private:
+    inline static const Utils::EnumStringConverter<T> converter{};
+
+  public:
+    static size_t stringify(T value, MutableBuffer output) {
+        return converter.stringify(value, output);
+    }
+    static size_t parse(T &value, ReadOnlyText input) {
+        return converter.parse(value, input);
+    }
 };
 
 template <typename T>
@@ -36,20 +86,17 @@ class Enum : public AEnum {
 
   public:
     constexpr Enum() = default;
+    constexpr Enum(T v) : value{v} {}
 
-    constexpr Enum(T value) : value{value} {}
-
-    Enum &operator=(T newValue) {
-        value = newValue;
+    Enum &operator=(T v) {
+        value = v;
         return *this;
     }
 
-    // Implicit conversion to underlying enum type
     operator T() const {
         return value;
     }
 
-    // Comparison operators
     bool operator==(const Enum &other) const {
         return value == other.value;
     }
@@ -73,13 +120,12 @@ class Enum : public AEnum {
 };
 
 template <typename T>
-bool operator==(T lhs, const Enum<T> &rhs) {
-    return lhs == rhs.value();
+inline bool operator==(T lhs, const Enum<T> &rhs) {
+    return lhs == static_cast<T>(rhs);
 }
-
 template <typename T>
-bool operator!=(T lhs, const Enum<T> &rhs) {
-    return lhs != rhs.value();
+inline bool operator!=(T lhs, const Enum<T> &rhs) {
+    return lhs != static_cast<T>(rhs);
 }
 
 } // namespace Core

@@ -105,6 +105,10 @@ class EnumCustomStringConverter {
   private:
     const Map &map;
 
+    // Lookup for the given variant in the association map.
+    // The complexity is O(n) but is it acceptable, because
+    // enum to string conversion is much less frequent than
+    // the opposite direction. Can be improved later.
     constexpr ReadOnlyText lookup(T variant) const {
         auto matcher = [variant](const Record &i) {
             return i.second == variant;
@@ -114,6 +118,8 @@ class EnumCustomStringConverter {
         return it->first;
     }
 
+    // Lookup for the given string in the association map.
+    // The complexity of this search is O(log n)
     constexpr std::optional<T> lookup(ReadOnlyText str) const {
         if (str.empty())
             return std::nullopt;

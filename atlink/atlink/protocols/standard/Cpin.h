@@ -68,33 +68,18 @@ class CpinReadResponse : public Core::AResponse {
 } // namespace Proto
 } // namespace ATL_NS
 
+
 template <>
-struct ATL_NS::Core::EnumTraits<ATL_NS::Proto::Std::CpinReadResponse::Code> {
-    using Code = ATL_NS::Proto::Std::CpinReadResponse::Code;
-    using Record = Utils::EnumCustomStringRecord<Code>;
-
-    static constexpr std::array map = {
-        Record{"PH_SIM_PIN", Code::PhSimPin},
-        Record{"PH_SIM_PUK", Code::PhSimPuk},
-        Record{"READY", Code::Ready},
-        Record{"SIM_PIN", Code::SimPin},
-        Record{"SIM_PIN2", Code::PhSimPin2},
-        Record{"SIM_PUK", Code::SimPuk},
-        Record{"SIM_PUK2", Code::PhSimPuk2},
+struct ATL_NS::Core::MapProvider<ATL_NS::Proto::Std::CpinReadResponse::Code> {
+    using Enum = ATL_NS::Proto::Std::CpinReadResponse::Code;
+    using Record = Utils::EnumCustomStringRecord<Enum>;
+    inline static constexpr std::array map = {
+        Record{"PH_SIM_PIN", Enum::PhSimPin},
+        Record{"PH_SIM_PUK", Enum::PhSimPuk},
+        Record{"READY", Enum::Ready},
+        Record{"SIM_PIN", Enum::SimPin},
+        Record{"SIM_PIN2", Enum::PhSimPin2},
+        Record{"SIM_PUK", Enum::SimPuk},
+        Record{"SIM_PUK2", Enum::PhSimPuk2},
     };
-
-    static_assert(Utils::isStrictlySortedByString(map),
-                  "CPIN response map shall be ordered by string");
-
-    template <size_t N>
-    using Converter = Utils::EnumCustomStringConverter<Code, N>;
-    inline static constexpr auto converter = Converter{map};
-
-    static size_t stringify(Code value, MutableBuffer output) {
-        return converter.stringify(value, output);
-    }
-
-    static size_t parse(Code &value, ReadOnlyText input) {
-        return converter.parse(value, input);
-    }
 };

@@ -206,19 +206,3 @@ class CmeError : public Core::AResponse {
 } // namespace Std
 } // namespace Proto
 } // namespace ATL_NS
-
-template <>
-struct ATL_NS::Core::EnumTraits<ATL_NS::Proto::Std::CmeError::Code> {
-    using Code = Proto::Std::CmeError::Code;
-    using EnumStringConverter = Utils::EnumStringConverter<Code>;
-
-    inline static constexpr auto converter = EnumStringConverter{};
-
-    static size_t stringify(Code value, MutableBuffer output) {
-        return converter.stringify(value, output);
-    }
-
-    static size_t parse(Code &value, ReadOnlyText input) {
-        return converter.parse(value, input);
-    }
-};
