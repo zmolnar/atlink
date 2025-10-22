@@ -23,26 +23,32 @@ class Deserializer : public atlink::Core::AInputVisitor {
         std::cout << "deserialized " << length << " bytes" << std::endl;
     }
 
-    void visit(const atlink::Core::Tag &tag) {
-        auto ssstr = tag.asStr();
-        valid = (0U == input.find(tag.asStr()));
-        if (valid) {
-            length += strlen(tag.asStr());
+    void visit(atlink::Core::Tag &tag) {
+        auto n = tag.parse(input.substr(length));
+        if (0U < n) {
+            length += n;
+        } else {
+            valid = false;
         }
     }
 
-    void visit(const atlink::Core::Term &term) {
-        valid = valid && (input.at(length) == '\r');
-        valid = valid && (input.at(length + 1) == '\n');
-        if (valid) {
-            length += 2;
+    void visit(atlink::Core::Term &term) {
+        auto n = term.parse(input.substr(length));
+        if (0U < n) {
+            length += n;
+        } else {
+            valid = false;
         }
     }
 
-    void visit(const char *str) {
-        valid = valid && (input.substr(length, strlen(str)) == str);
+    void visit(atlink::Core::MutableBuffer str) {
+        return;
+    }
+
+    void visit(atlink::Core::ReadOnlyText str) {
+        valid = valid && (input.substr(length, str.size()) == str);
         if (valid) {
-            length += strlen(str);
+            length += str.size();
         }
     }
 
@@ -69,8 +75,7 @@ class Ok : public ATL_NS::Core::AResponse {
 
 using Result = std::variant<Ok, ATL_NS::Proto::Std::CmeError>;
 
-Result exchange(const ATL_NS::Core::ACommand &cmd,
-                ATL_NS::Core::AResponse &res) {
+Result exchange(const ATL_NS::Core::ACommand &cmd, ATL_NS::Core::AResponse &res) {
 
     Deserializer deserializer("+CME ERROR: 141\r\n");
     ATL_NS::Proto::Std::CmeError cme{};

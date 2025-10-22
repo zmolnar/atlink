@@ -26,17 +26,37 @@ namespace Core {
 using ReadOnlyText = std::string_view;
 using MutableBuffer = gsl::span<char>;
 
-class Tag {
-    const char *str;
+class Sequence {
+    ReadOnlyText seq;
 
   public:
-    explicit Tag(const char *tag) : str{tag} {}
-    const char *asStr() const {
-        return str;
+    explicit Sequence(ReadOnlyText seq) : seq{seq} {}
+    
+    size_t stringify(MutableBuffer output) const {
+        size_t n = 0U;
+        if (seq.size() < output.size()) {
+            n = seq.size();
+            std::copy_n(seq.data(), seq.size(), output.data());
+        }
+        return n;
+    }
+
+    size_t parse(ReadOnlyText input) const {
+        auto start = input.find(seq);
+        size_t n = 0U;
+        if (0U == start) {
+            n = seq.size();
+        }
+        return n;
     }
 };
 
-class Term {};
+using Tag = Sequence;
+
+class Term : public Sequence {
+  public:
+    Term() : Sequence{"\r\n"} {}
+};
 
 class AEnum {
   public:

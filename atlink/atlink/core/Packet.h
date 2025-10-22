@@ -26,7 +26,7 @@ class AOutputVisitor {
   public:
     virtual void visit(const Tag &tag) = 0;
     virtual void visit(const Term &term) = 0;
-    virtual void visit(const char *str) = 0;
+    virtual void visit(ReadOnlyText str) = 0;
     virtual void visit(const AEnum &e) = 0;
     virtual void visit(int i) = 0;
     virtual ~AOutputVisitor() = default;
@@ -34,9 +34,10 @@ class AOutputVisitor {
 
 class AInputVisitor {
   public:
-    virtual void visit(const Tag &tag) = 0;
-    virtual void visit(const Term &term) = 0;
-    virtual void visit(const char *str) = 0;
+    virtual void visit(Tag &tag) = 0;
+    virtual void visit(Term &term) = 0;
+    virtual void visit(MutableBuffer str) = 0;
+    virtual void visit(ReadOnlyText str) = 0;
     virtual void visit(AEnum &e) = 0;
     virtual void visit(int i) = 0;
     virtual ~AInputVisitor() = default;
