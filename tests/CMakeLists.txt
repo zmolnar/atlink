@@ -13,6 +13,7 @@ enable_testing()
 add_subdirectory(../atlink atlink_build)
 
 add_executable(atlink_tests
+    utDeserializer.cpp
     utEnumStringConverter.cpp
 )
 

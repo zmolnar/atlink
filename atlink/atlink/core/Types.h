@@ -30,8 +30,8 @@ class Sequence {
     ReadOnlyText seq;
 
   public:
-    explicit Sequence(ReadOnlyText seq) : seq{seq} {}
-    
+    explicit constexpr Sequence(ReadOnlyText seq) : seq{seq} {}
+
     size_t stringify(MutableBuffer output) const {
         size_t n = 0U;
         if (seq.size() < output.size()) {
@@ -53,9 +53,14 @@ class Sequence {
 
 using Tag = Sequence;
 
+class Comma : public Sequence {
+  public:
+    constexpr Comma() : Sequence{","} {}
+};
+
 class Term : public Sequence {
   public:
-    Term() : Sequence{"\r\n"} {}
+    constexpr Term() : Sequence{"\r\n"} {}
 };
 
 class AEnum {

@@ -10,59 +10,7 @@
 #include "atlink/core/Types.h"
 #include "atlink/protocols/standard/CmeError.h"
 #include "atlink/protocols/standard/Cpin.h"
-
-class Deserializer : public atlink::Core::AInputVisitor {
-
-    std::string input;
-    size_t length = 0;
-    bool valid = true;
-
-  public:
-    Deserializer(const char *input) : input(input) {}
-    ~Deserializer() {
-        std::cout << "deserialized " << length << " bytes" << std::endl;
-    }
-
-    void visit(atlink::Core::Tag &tag) {
-        auto n = tag.parse(input.substr(length));
-        if (0U < n) {
-            length += n;
-        } else {
-            valid = false;
-        }
-    }
-
-    void visit(atlink::Core::Term &term) {
-        auto n = term.parse(input.substr(length));
-        if (0U < n) {
-            length += n;
-        } else {
-            valid = false;
-        }
-    }
-
-    void visit(atlink::Core::MutableBuffer str) {
-        return;
-    }
-
-    void visit(atlink::Core::ReadOnlyText str) {
-        valid = valid && (input.substr(length, str.size()) == str);
-        if (valid) {
-            length += str.size();
-        }
-    }
-
-    void visit(atlink::Core::AEnum &e) {
-        auto n = e.parse(input.substr(length));
-        if (valid && (0U < n)) {
-            length += n;
-        } else {
-            valid = false;
-        }
-    }
-
-    void visit(int i) {}
-};
+#include "atlink/utils/Deserializer.h"
 
 class Ok : public ATL_NS::Core::AResponse {
   public:
@@ -77,7 +25,7 @@ using Result = std::variant<Ok, ATL_NS::Proto::Std::CmeError>;
 
 Result exchange(const ATL_NS::Core::ACommand &cmd, ATL_NS::Core::AResponse &res) {
 
-    Deserializer deserializer("+CME ERROR: 141\r\n");
+    atlink::Utils::Deserializer deserializer("+CME ERROR: 141\r\n");
     ATL_NS::Proto::Std::CmeError cme{};
     cme.accept(deserializer);
     char buf[128] = {0};

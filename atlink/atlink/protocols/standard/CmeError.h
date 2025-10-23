@@ -196,7 +196,7 @@ class CmeError : public Core::AResponse {
 
     Core::Enum<Code> code{};
 
-    CmeError() : Core::AResponse("+CME ERROR: ") {}
+    CmeError() : Core::AResponse("+CME ERROR:") {}
     ~CmeError() = default;
     void accept(Core::AInputVisitor &visitor) override {
         APacket::accept(visitor, code);

@@ -17,7 +17,8 @@
 
 #pragma once
 
-#include "Types.h"
+#include "atlink/core/Constants.h"
+#include "atlink/core/Types.h"
 
 namespace ATL_NS {
 namespace Core {
@@ -25,8 +26,9 @@ namespace Core {
 class AOutputVisitor {
   public:
     virtual void visit(const Tag &tag) = 0;
+    virtual void visit(const Comma &comma) = 0;
     virtual void visit(const Term &term) = 0;
-    virtual void visit(ReadOnlyText str) = 0;
+    virtual void visit(const ReadOnlyText str) = 0;
     virtual void visit(const AEnum &e) = 0;
     virtual void visit(int i) = 0;
     virtual ~AOutputVisitor() = default;
@@ -34,35 +36,49 @@ class AOutputVisitor {
 
 class AInputVisitor {
   public:
-    virtual void visit(Tag &tag) = 0;
-    virtual void visit(Term &term) = 0;
-    virtual void visit(MutableBuffer str) = 0;
-    virtual void visit(ReadOnlyText str) = 0;
+    virtual void visit(const Tag &tag) = 0;
+    virtual void visit(const Comma &comma) = 0;
+    virtual void visit(const Term &term) = 0;
+    virtual void visit(MutableBuffer &str) = 0;
     virtual void visit(AEnum &e) = 0;
-    virtual void visit(int i) = 0;
+    virtual void visit(int &i) = 0;
     virtual ~AInputVisitor() = default;
 };
 
 class APacket {
   public:
     Tag tag;
-    Term term;
-    explicit APacket(const char *tag) : tag{tag}, term{} {}
+
+    explicit APacket(ReadOnlyText tag) : tag{tag} {}
     virtual ~APacket() = default;
 
   protected:
     template <typename... Args>
     void accept(AInputVisitor &visitor, Args &&...args) {
         visitor.visit(tag);
-        (visitor.visit(std::forward<Args>(args)), ...);
-        visitor.visit(term);
+        if constexpr (sizeof...(args) > 0) {
+            visitWithCommas(visitor, std::forward<Args>(args)...);
+        }
+        visitor.visit(Constants::TERM);
     }
 
     template <typename... Args>
     void accept(AOutputVisitor &visitor, Args &&...args) const {
         visitor.visit(tag);
-        (visitor.visit(std::forward<Args>(args)), ...);
-        visitor.visit(term);
+        if constexpr (sizeof...(args) > 0) {
+            visitWithCommas(visitor, std::forward<Args>(args)...);
+        }
+        visitor.visit(Constants::TERM);
+    }
+
+  private:
+    template <typename Visitor, typename First, typename... Rest>
+    static void visitWithCommas(Visitor &visitor, First &&first, Rest &&...rest) {
+        visitor.visit(std::forward<First>(first));
+        if constexpr (sizeof...(rest) > 0) {
+            visitor.visit(Constants::COMMA);
+            visitWithCommas(visitor, std::forward<Rest>(rest)...);
+        }
     }
 };
 
