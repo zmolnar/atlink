@@ -1,0 +1,67 @@
+{
+  "version": "2.0.0",
+  "inputs": [
+    {
+      "id": "buildType",
+      "type": "pickString",
+      "description": "CMake build type",
+      "options": ["Debug", "Release"],
+      "default": "Debug"
+    }
+  ],
+  "tasks": [
+    {
+      "label": "Clean builds",
+      "type": "shell",
+      "command": "rm -rf ${workspaceFolder}/{build,install}",
+      "problemMatcher": []
+    },
+    {
+      "label": "Install atlink",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "${workspaceFolder}/scripts/atlinkctl",
+        "install",
+        "${workspaceFolder}",
+        "--build-type",
+        "${input:buildType}"
+      ],
+      "problemMatcher": ["$gcc"],
+      "group": "build"
+    },
+    {
+      "label": "Build example: linux",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "${workspaceFolder}/scripts/atlinkctl",
+        "build",
+        "${workspaceFolder}",
+        "examples/linux",
+        "--build-type",
+        "${input:buildType}"
+      ],
+      "problemMatcher": ["$gcc"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "Build tests",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "${workspaceFolder}/scripts/atlinkctl",
+        "build",
+        "${workspaceFolder}",
+        "tests",
+        "--build-type",
+        "${input:buildType}"
+      ],
+      "problemMatcher": ["$gcc"],
+      "group": "build"
+    }
+  ]
+}ı
