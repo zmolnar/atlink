@@ -15,6 +15,10 @@ add_subdirectory(../atlink atlink_build)
 add_executable(atlink_tests
     utDeserializer.cpp
     utEnumStringConverter.cpp
+    utResponse.cpp
+    utResponsePack.cpp
+    utCommand.cpp
+    utUrc.cpp
 )
 
 target_link_libraries(atlink_tests PRIVATE atlink::atlink Catch2::Catch2WithMain)

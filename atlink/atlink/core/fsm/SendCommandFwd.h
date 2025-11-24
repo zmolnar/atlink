@@ -17,30 +17,33 @@
 
 #pragma once
 
-#include <type_traits>
-#include <variant>
+#include "atlink/core/fsm/Commands.h"
+#include "atlink/core/fsm/Context.h"
+#include "atlink/core/fsm/Events.h"
+#include "atlink/core/fsm/StateFwd.h"
 
-#include <atlink/core/Packet.h>
+#include "atlink/platform/Facade.h"
 
 namespace ATL_NS {
 namespace Core {
+namespace Fsm {
+namespace State {
 
-class AResponse : public APacket {
+class SendCommand {
+    Context *ctx;
+    Command::SendCommand msg;
+    static inline Platform::Logger logger{"FSM: state-send-command"};
+
   public:
-    explicit AResponse(const char *tag) : APacket{tag} {}
-    virtual bool accept(AInputVisitor &visitor) = 0;
-    virtual ~AResponse() = default;
+    SendCommand(Context *ctx, Command::SendCommand msg) : ctx{ctx}, msg{msg} {}
+    SendCommand(const SendCommand &) = default;
+    SendCommand &operator=(const SendCommand &) = default;
 
-  protected:
-    template <typename... Args>
-    bool acceptImpl(AInputVisitor &visitor, Args &&...args) {
-        visitor.reset();
-        (void)visitor.visit(Constants::Optionals::CrLf);
-        return APacket::acceptWithTerm(visitor,
-                                       Constants::Mandatory::CrLf,
-                                       std::forward<Args>(args)...);
-    }
+    Variant handle(const Event event);
+    Variant start();
 };
 
+} // namespace State
+} // namespace Fsm
 } // namespace Core
 } // namespace ATL_NS

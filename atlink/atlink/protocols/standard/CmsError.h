@@ -17,30 +17,28 @@
 
 #pragma once
 
-#include <type_traits>
-#include <variant>
-
-#include <atlink/core/Packet.h>
+#include "atlink/core/Enum.h"
+#include "atlink/core/Response.h"
 
 namespace ATL_NS {
-namespace Core {
+namespace Proto {
+namespace Std {
 
-class AResponse : public APacket {
+class CmsError : public Core::AResponse {
   public:
-    explicit AResponse(const char *tag) : APacket{tag} {}
-    virtual bool accept(AInputVisitor &visitor) = 0;
-    virtual ~AResponse() = default;
+    enum class Code {
+        Unknown = 500,
+    };
 
-  protected:
-    template <typename... Args>
-    bool acceptImpl(AInputVisitor &visitor, Args &&...args) {
-        visitor.reset();
-        (void)visitor.visit(Constants::Optionals::CrLf);
-        return APacket::acceptWithTerm(visitor,
-                                       Constants::Mandatory::CrLf,
-                                       std::forward<Args>(args)...);
+    Core::Enum<Code> code{};
+
+    CmsError() : Core::AResponse("+CMS ERROR:") {}
+    ~CmsError() = default;
+    bool accept(Core::AInputVisitor &visitor) override {
+        return APacket::accept(visitor, code);
     }
 };
 
-} // namespace Core
+} // namespace Std
+} // namespace Proto
 } // namespace ATL_NS

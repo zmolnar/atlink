@@ -26,9 +26,10 @@ SCENARIO("Tag can be deserialized") {
 
     GIVEN("A valid tag") {
         WHEN("Deserialized") {
+            atlink::Utils::Deserializer deserializer{"+CSQNA"};
+            auto success = deserializer.visit(tag);
             THEN("The correct number of bytes is reported") {
-                atlink::Utils::Deserializer deserializer{"+CSQNA"};
-                deserializer.visit(tag);
+                REQUIRE(success);
                 REQUIRE(deserializer.isValid());
                 REQUIRE(6U == deserializer.numberOfBytesConsumed());
             }
@@ -37,9 +38,10 @@ SCENARIO("Tag can be deserialized") {
 
     GIVEN("An invalid tag") {
         WHEN("Deserialized") {
+            atlink::Utils::Deserializer deserializer{"+CSQN"};
+            auto success = deserializer.visit(tag);
             THEN("The deserializer reports invalidity") {
-                atlink::Utils::Deserializer deserializer{"+CSQN"};
-                deserializer.visit(tag);
+                REQUIRE_FALSE(success);
                 REQUIRE_FALSE(deserializer.isValid());
                 REQUIRE(0U == deserializer.numberOfBytesConsumed());
             }
@@ -48,9 +50,10 @@ SCENARIO("Tag can be deserialized") {
 
     GIVEN("A valid tag with leading whitespaces") {
         WHEN("Deserialized") {
+            atlink::Utils::Deserializer deserializer{"  \t+CSQNA"};
+            auto success = deserializer.visit(tag);
             THEN("The correct number of bytes is reported") {
-                atlink::Utils::Deserializer deserializer{"  \t+CSQNA"};
-                deserializer.visit(tag);
+                REQUIRE(success);
                 REQUIRE(deserializer.isValid());
                 REQUIRE(9U == deserializer.numberOfBytesConsumed());
             }

@@ -20,44 +20,69 @@
 #include "atlink/core/Packet.h"
 
 #include <charconv>
-#include <string_view>
 
 namespace ATL_NS {
 namespace Utils {
 
 class Deserializer : public Core::AInputVisitor {
 
-    std::string_view input;
+    Core::ReadOnlyText input;
     size_t length = 0;
     bool valid = true;
 
   public:
-    explicit Deserializer(std::string_view input) : input(input) {}
+    explicit Deserializer(Core::ReadOnlyText input) : input(input) {}
     ~Deserializer() = default;
 
-    void visit(const Core::Tag &tag) override {
+    void reset() override {
         length = 0U;
         valid = true;
-        skipWhitespaces();
-        parse(tag);
     }
 
-    void visit(const Core::Comma &comma) override {
+    bool visit(const Core::Sequence &seq) override {
         skipWhitespaces();
-        parse(comma);
+        if (valid && (0U < seq.length())) {
+            auto n = seq.parse(input.substr(length));
+            valid = (0U < n) || seq.isOptional();
+            length += n;
+        }
+        return valid;
     }
 
-    void visit(const Core::Term &term) override {
+    bool visit(Core::QuotedString &str) override {
         skipWhitespaces();
-        parse(term);
+        std::string_view in = input.substr(length);
+
+        auto consumed = parseStringLiteral(in, str.buf);
+        valid = valid && (0U < consumed);
+        length += consumed;
+        return valid;
     }
 
-    void visit(Core::MutableBuffer &str) override {
-        skipWhitespaces();
-        return;
+    bool visit(Core::RawUntilTerm &raw) override {
+        std::array<char, 3U> term{};
+        auto success = Core::Term{}.stringify(term);
+        assert(success);
+
+        std::string_view in = input.substr(length);
+        auto pos = in.find(term.data());
+
+        std::size_t take = 0U;
+        if (pos == std::string_view::npos) {
+            take = std::min<std::size_t>(in.size(), raw.buf.size());
+        } else {
+            take = std::min<std::size_t>(pos, raw.buf.size());
+        }
+
+        for (std::size_t i = 0; i < take; ++i) {
+            raw.buf[i] = in[i];
+        }
+
+        length += take;
+        return valid;
     }
 
-    void visit(Core::AEnum &e) override {
+    bool visit(Core::AEnum &e) override {
         skipWhitespaces();
         auto n = e.parse(input.substr(length));
         if (valid && (0U < n)) {
@@ -65,9 +90,10 @@ class Deserializer : public Core::AInputVisitor {
         } else {
             valid = false;
         }
+        return valid;
     }
 
-    void visit(int &i) override {
+    bool visit(int &i) override {
         skipWhitespaces();
         const auto *first = input.data() + length;
         const auto *last = input.data() + input.size();
@@ -80,7 +106,7 @@ class Deserializer : public Core::AInputVisitor {
         } else {
             valid = false;
         }
-        return;
+        return valid;
     }
 
     bool isValid() const {
@@ -102,14 +128,22 @@ class Deserializer : public Core::AInputVisitor {
             length = input.size();
         }
     }
-    void parse(const Core::Sequence &seq) {
-        auto n = seq.parse(input.substr(length));
-        if (valid && (0U < n)) {
-            length += n;
-        } else {
-            valid = false;
-            length = 0U;
+
+    static size_t parseStringLiteral(std::string_view in, gsl::span<char> out) {
+        static constexpr auto npos = std::string_view::npos;
+        auto start = in.find("\"");
+        auto end = (npos != start) ? in.find("\"", start + 1U) : npos;
+        size_t length = 0U;
+        if ((npos != start) && (npos != end) && ((start + 1) < end)) {
+            length = end - start - 1;
+            if (length < out.size()) {
+                std::copy_n(in.data() + start + 1, length, out.begin());
+                out[length] = '\0';
+            } else {
+                length = 0U;
+            }
         }
+        return length + 2;
     }
 };
 

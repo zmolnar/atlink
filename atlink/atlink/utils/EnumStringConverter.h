@@ -39,15 +39,16 @@ class EnumStringConverter {
 
     constexpr size_t stringify(T value, MutableBuffer output) const {
         static_assert(sizeof(T) <= sizeof(int), "T must not be larger than int");
-
-        auto *first = output.data();
-        auto *last = output.data() + output.size() - 1U;
-        auto num = static_cast<int>(value);
-        auto result = std::to_chars(first, last, num);
         size_t n = 0U;
-        if (result.ec == std::errc{}) {
-            n = result.ptr - output.data();
-            output[n] = '\0';
+        if (0U < output.size()) {
+            auto *first = output.data();
+            auto *last = output.data() + output.size() - 1U;
+            auto num = static_cast<int>(value);
+            auto result = std::to_chars(first, last, num);
+            if (result.ec == std::errc{}) {
+                n = result.ptr - output.data();
+                output[n] = '\0';
+            }
         }
         return n;
     }

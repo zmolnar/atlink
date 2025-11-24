@@ -26,17 +26,31 @@ namespace Core {
 using ReadOnlyText = std::string_view;
 using MutableBuffer = gsl::span<char>;
 
+struct QuotedString {
+    MutableBuffer buf;
+};
+
+struct RawUntilTerm {
+    MutableBuffer buf;
+};
+
 class Sequence {
-    ReadOnlyText seq;
+    const ReadOnlyText seq;
+    const bool optional;
 
   public:
-    explicit constexpr Sequence(ReadOnlyText seq) : seq{seq} {}
+    explicit constexpr Sequence(ReadOnlyText seq, bool optional = false)
+        : seq{seq}, optional{optional} {}
 
+    bool isOptional() const {
+        return optional;
+    }
+    
     size_t stringify(MutableBuffer output) const {
         size_t n = 0U;
         if (seq.size() < output.size()) {
-            n = seq.size();
             std::copy_n(seq.data(), seq.size(), output.data());
+            n = seq.size();
         }
         return n;
     }
@@ -48,6 +62,10 @@ class Sequence {
             n = seq.size();
         }
         return n;
+    }
+
+    size_t length() const {
+        return seq.size();
     }
 };
 
@@ -61,6 +79,11 @@ class Comma : public Sequence {
 class Term : public Sequence {
   public:
     constexpr Term() : Sequence{"\r\n"} {}
+};
+
+class CrLf : public Sequence {
+  public:
+    constexpr CrLf() : Sequence{"\r\n"} {}
 };
 
 class AEnum {

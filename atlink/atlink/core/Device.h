@@ -17,28 +17,32 @@
 
 #pragma once
 
-#include <type_traits>
-#include <variant>
-
-#include <atlink/core/Packet.h>
+#include "atlink/core/fsm/Orchestrator.h"
+#include "atlink/platform/Facade.h"
 
 namespace ATL_NS {
 namespace Core {
 
-class AResponse : public APacket {
-  public:
-    explicit AResponse(const char *tag) : APacket{tag} {}
-    virtual bool accept(AInputVisitor &visitor) = 0;
-    virtual ~AResponse() = default;
+class Device {
 
-  protected:
-    template <typename... Args>
-    bool acceptImpl(AInputVisitor &visitor, Args &&...args) {
-        visitor.reset();
-        (void)visitor.visit(Constants::Optionals::CrLf);
-        return APacket::acceptWithTerm(visitor,
-                                       Constants::Mandatory::CrLf,
-                                       std::forward<Args>(args)...);
+    Platform::Logger logger;
+    Fsm::Orchestrator orchestrator;
+
+  public:
+    Device(const char *name, Platform::DeviceIO &io, AUrcDispatcher &udp)
+        : logger{name}, orchestrator{io, udp} {}
+
+    void loop() {
+        orchestrator.loop();
+    }
+
+    bool sendCommand(AResponsePack *result, ACommand *cmd, AResponse *res) {
+        auto ec = orchestrator.sendCommand(result, cmd, res);
+        return (ErrorCode::NoError == ec);
+    }
+
+    void shutDown() {
+        orchestrator.shutDown();
     }
 };
 

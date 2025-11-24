@@ -15,32 +15,48 @@
 //  along with ATLink.  If not, see <https://www.gnu.org/licenses/>.
 //
 
+// atlink/platform/linux/Mutex.h
 #pragma once
-
-#include <type_traits>
-#include <variant>
-
-#include <atlink/core/Packet.h>
+#include <pthread.h>
 
 namespace ATL_NS {
-namespace Core {
+namespace Platform {
+namespace Impl {
+namespace Linux {
 
-class AResponse : public APacket {
+class Mutex {
   public:
-    explicit AResponse(const char *tag) : APacket{tag} {}
-    virtual bool accept(AInputVisitor &visitor) = 0;
-    virtual ~AResponse() = default;
+    using Native = pthread_mutex_t;
 
-  protected:
-    template <typename... Args>
-    bool acceptImpl(AInputVisitor &visitor, Args &&...args) {
-        visitor.reset();
-        (void)visitor.visit(Constants::Optionals::CrLf);
-        return APacket::acceptWithTerm(visitor,
-                                       Constants::Mandatory::CrLf,
-                                       std::forward<Args>(args)...);
+    Mutex() {
+        ::pthread_mutex_init(&mtx, nullptr);
     }
+    ~Mutex() {
+        ::pthread_mutex_destroy(&mtx);
+    }
+
+    void lock() {
+        ::pthread_mutex_lock(&mtx);
+    }
+    bool tryLock() {
+        return ::pthread_mutex_trylock(&mtx) == 0;
+    }
+    void unlock() {
+        ::pthread_mutex_unlock(&mtx);
+    }
+
+    Native &native() {
+        return mtx;
+    }
+    const Native &native() const {
+        return mtx;
+    }
+
+  private:
+    Native mtx{};
 };
 
-} // namespace Core
+} // namespace Linux
+} // namespace Impl
+} // namespace Platform
 } // namespace ATL_NS

@@ -17,30 +17,21 @@
 
 #pragma once
 
-#include <type_traits>
-#include <variant>
-
-#include <atlink/core/Packet.h>
+#include "atlink/core/ResponsePack.h"
+#include "atlink/protocols/standard/CmeError.h"
+#include "atlink/protocols/standard/CmsError.h"
+#include "atlink/protocols/standard/Error.h"
+#include "atlink/protocols/standard/Ok.h"
 
 namespace ATL_NS {
 namespace Core {
 
-class AResponse : public APacket {
-  public:
-    explicit AResponse(const char *tag) : APacket{tag} {}
-    virtual bool accept(AInputVisitor &visitor) = 0;
-    virtual ~AResponse() = default;
-
-  protected:
-    template <typename... Args>
-    bool acceptImpl(AInputVisitor &visitor, Args &&...args) {
-        visitor.reset();
-        (void)visitor.visit(Constants::Optionals::CrLf);
-        return APacket::acceptWithTerm(visitor,
-                                       Constants::Mandatory::CrLf,
-                                       std::forward<Args>(args)...);
-    }
-};
+template <typename... Rs>
+using FinalResultCode = ResponsePack<Rs...,
+                                     Proto::Std::Ok,
+                                     Proto::Std::Error,
+                                     Proto::Std::CmsError,
+                                     Proto::Std::CmeError>;
 
 } // namespace Core
 } // namespace ATL_NS

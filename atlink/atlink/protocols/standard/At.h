@@ -17,30 +17,25 @@
 
 #pragma once
 
-#include <type_traits>
-#include <variant>
-
-#include <atlink/core/Packet.h>
+#include "atlink/core/Command.h"
+#include "atlink/core/Response.h"
 
 namespace ATL_NS {
-namespace Core {
+namespace Proto {
+namespace Std {
+namespace At {
+namespace Write {
 
-class AResponse : public APacket {
+class Command : public Core::ACommand {
   public:
-    explicit AResponse(const char *tag) : APacket{tag} {}
-    virtual bool accept(AInputVisitor &visitor) = 0;
-    virtual ~AResponse() = default;
-
-  protected:
-    template <typename... Args>
-    bool acceptImpl(AInputVisitor &visitor, Args &&...args) {
-        visitor.reset();
-        (void)visitor.visit(Constants::Optionals::CrLf);
-        return APacket::acceptWithTerm(visitor,
-                                       Constants::Mandatory::CrLf,
-                                       std::forward<Args>(args)...);
+    Command() : Core::ACommand("AT") {}
+    bool accept(Core::AOutputVisitor &visitor) const override {
+        return Core::ACommand::acceptImpl(visitor);
     }
 };
 
-} // namespace Core
+} // namespace Write
+} // namespace At
+} // namespace Std
+} // namespace Proto
 } // namespace ATL_NS

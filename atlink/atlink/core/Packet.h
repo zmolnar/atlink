@@ -18,6 +18,7 @@
 #pragma once
 
 #include "atlink/core/Constants.h"
+#include "atlink/core/Enum.h"
 #include "atlink/core/Types.h"
 
 namespace ATL_NS {
@@ -25,23 +26,27 @@ namespace Core {
 
 class AOutputVisitor {
   public:
-    virtual void visit(const Tag &tag) = 0;
-    virtual void visit(const Comma &comma) = 0;
-    virtual void visit(const Term &term) = 0;
-    virtual void visit(const ReadOnlyText str) = 0;
-    virtual void visit(const AEnum &e) = 0;
-    virtual void visit(int i) = 0;
+    virtual void reset() = 0;
+    virtual bool visit(const Tag &tag) = 0;
+    virtual bool visit(const Comma &comma) = 0;
+    virtual bool visit(const Term &term) = 0;
+    virtual bool visit(const ReadOnlyText str) = 0;
+    virtual bool visit(const AEnum &e) = 0;
+    virtual bool visit(int i) = 0;
     virtual ~AOutputVisitor() = default;
 };
 
 class AInputVisitor {
   public:
-    virtual void visit(const Tag &tag) = 0;
-    virtual void visit(const Comma &comma) = 0;
-    virtual void visit(const Term &term) = 0;
-    virtual void visit(MutableBuffer &str) = 0;
-    virtual void visit(AEnum &e) = 0;
-    virtual void visit(int &i) = 0;
+    virtual void reset() = 0;
+    // virtual bool visit(const Tag &tag) = 0;
+    // virtual bool visit(const Comma &comma) = 0;
+    // virtual bool visit(const Term &term) = 0;
+    virtual bool visit(const Sequence &seq) = 0;
+    virtual bool visit(QuotedString &str) = 0;
+    virtual bool visit(RawUntilTerm &buf) = 0;
+    virtual bool visit(AEnum &e) = 0;
+    virtual bool visit(int &i) = 0;
     virtual ~AInputVisitor() = default;
 };
 
@@ -54,31 +59,48 @@ class APacket {
 
   protected:
     template <typename... Args>
-    void accept(AInputVisitor &visitor, Args &&...args) {
-        visitor.visit(tag);
-        if constexpr (sizeof...(args) > 0) {
-            visitWithCommas(visitor, std::forward<Args>(args)...);
-        }
-        visitor.visit(Constants::TERM);
+    bool accept(AInputVisitor &visitor, Args &&...args) {
+        return acceptWithTerm(visitor, Constants::Mandatory::CrLf, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void accept(AOutputVisitor &visitor, Args &&...args) const {
-        visitor.visit(tag);
+    bool accept(AOutputVisitor &visitor, Args &&...args) const {
+        return acceptWithTerm(visitor, Constants::Mandatory::CrLf, std::forward<Args>(args)...);
+    }
+
+    template <typename... Args>
+    bool acceptWithTerm(AInputVisitor &visitor, const Sequence &term, Args &&...args) {
+        if (!visitor.visit(tag))
+            return false;
         if constexpr (sizeof...(args) > 0) {
-            visitWithCommas(visitor, std::forward<Args>(args)...);
+            if (!visitWithCommas(visitor, std::forward<Args>(args)...))
+                return false;
         }
-        visitor.visit(Constants::TERM);
+        return visitor.visit(term);
+    }
+
+    template <typename... Args>
+    bool acceptWithTerm(AOutputVisitor &visitor, const Sequence &term, Args &&...args) const {
+        if (!visitor.visit(tag))
+            return false;
+        if constexpr (sizeof...(args) > 0) {
+            if (!visitWithCommas(visitor, std::forward<Args>(args)...))
+                return false;
+        }
+        return visitor.visit(term);
     }
 
   private:
     template <typename Visitor, typename First, typename... Rest>
-    static void visitWithCommas(Visitor &visitor, First &&first, Rest &&...rest) {
-        visitor.visit(std::forward<First>(first));
+    static bool visitWithCommas(Visitor &visitor, First &&first, Rest &&...rest) {
+        if (!visitor.visit(std::forward<First>(first)))
+            return false;
         if constexpr (sizeof...(rest) > 0) {
-            visitor.visit(Constants::COMMA);
-            visitWithCommas(visitor, std::forward<Rest>(rest)...);
+            if (!visitor.visit(Constants::Mandatory::Comma))
+                return false;
+            return visitWithCommas(visitor, std::forward<Rest>(rest)...);
         }
+        return true;
     }
 };
 

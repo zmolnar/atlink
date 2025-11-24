@@ -15,44 +15,35 @@
 //  along with ATLink.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-#include "Response.h"
+#pragma once
 
-#include <variant>
+#include "atlink/core/ResponsePack.h"
 
-#ifndef URC_H
-#define URC_H
+#include <array>
 
 namespace ATL_NS {
+namespace Core {
 
-template <typename... Urcs>
-class UrcParser {
-    static_assert((std::is_base_of<AResponse, Urcs>::value && ...),
-                  "all URC shall be a Response packet");
-
-    std::variant<std::monostate, Urcs...> variant{};
-
+class AnyUrc : public AResponse {
   public:
-    UrcParser() = default;
+    std::array<char, 512U> storage{};
+    RawUntilTerm payload{storage};
 
-    std::variant<Urcs...> accept(ATL_NS::AInputVisitor &visitor) {
+    AnyUrc() : AResponse("") {}
 
-        return std::visit(
-            [&visitor](auto &&arg) -> std::variant<Urcs...> {
-                arg.accept(visitor);
-                return std::variant<Urcs...>{};
-            },
-            variant);
-    }
-
-    bool isValid() const {
-        return std::holds_alternative<std::monostate>(variant);
-    }
-
-    std::variant<Urcs...> get() const {
-        return variant;
+    bool accept(AInputVisitor &visitor) override {
+        return AResponse::acceptImpl(visitor, payload);
     }
 };
 
-} // namespace ATL_NS
+template <typename... Rs>
+using Urc = ResponsePack<Rs..., AnyUrc>;
 
-#endif
+class AUrcDispatcher {
+  public:
+    virtual size_t dispatch(ReadOnlyText str) = 0;
+    virtual ~AUrcDispatcher() = default;
+};
+
+} // namespace Core
+} // namespace ATL_NS

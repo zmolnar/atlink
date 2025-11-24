@@ -29,8 +29,8 @@ namespace Std {
 class CpinRead : public Core::ACommand {
   public:
     CpinRead() : Core::ACommand("+CPIN? ") {}
-    void accept(Core::AOutputVisitor &visitor) const override {
-        APacket::accept(visitor);
+    bool accept(Core::AOutputVisitor &visitor) const override {
+        return APacket::accept(visitor);
     }
 };
 
@@ -38,8 +38,8 @@ class CpinWrite : public Core::ACommand {
   public:
     CpinWrite() : Core::ACommand("+CPIN=") {}
     int pin;
-    void accept(Core::AOutputVisitor &visitor) const override {
-        APacket::accept(visitor, pin);
+    bool accept(Core::AOutputVisitor &visitor) const override {
+        return APacket::accept(visitor, pin);
     }
 };
 
@@ -59,15 +59,14 @@ class CpinReadResponse : public Core::AResponse {
 
     CpinReadResponse() : Core::AResponse("+CPIN: ") {}
     ~CpinReadResponse() = default;
-    void accept(Core::AInputVisitor &visitor) override {
-        APacket::accept(visitor, code);
+    bool accept(Core::AInputVisitor &visitor) override {
+        return APacket::accept(visitor, code);
     }
 };
 
 } // namespace Std
 } // namespace Proto
 } // namespace ATL_NS
-
 
 template <>
 struct ATL_NS::Core::MapProvider<ATL_NS::Proto::Std::CpinReadResponse::Code> {

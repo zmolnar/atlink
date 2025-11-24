@@ -97,6 +97,10 @@ class Enum : public AEnum {
         return value;
     }
 
+    T get() const {
+        return value;
+    }
+
     bool operator==(const Enum &other) const {
         return value == other.value;
     }

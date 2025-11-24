@@ -17,30 +17,27 @@
 
 #pragma once
 
-#include <type_traits>
-#include <variant>
+#include "atlink/core/Command.h"
+#include "atlink/core/ErrorCode.h"
+#include "atlink/core/Response.h"
+#include "atlink/core/ResponsePack.h"
 
-#include <atlink/core/Packet.h>
+#include "atlink/platform/Facade.h"
 
 namespace ATL_NS {
 namespace Core {
+namespace Fsm {
+namespace Command {
 
-class AResponse : public APacket {
-  public:
-    explicit AResponse(const char *tag) : APacket{tag} {}
-    virtual bool accept(AInputVisitor &visitor) = 0;
-    virtual ~AResponse() = default;
-
-  protected:
-    template <typename... Args>
-    bool acceptImpl(AInputVisitor &visitor, Args &&...args) {
-        visitor.reset();
-        (void)visitor.visit(Constants::Optionals::CrLf);
-        return APacket::acceptWithTerm(visitor,
-                                       Constants::Mandatory::CrLf,
-                                       std::forward<Args>(args)...);
-    }
+struct SendCommand {
+    ErrorCode *ec;
+    AResponsePack *result;
+    const ACommand *command;
+    AResponse *response;
+    Platform::Semaphore *sem;
 };
 
+} // namespace Command
+} // namespace Fsm
 } // namespace Core
 } // namespace ATL_NS

@@ -17,30 +17,35 @@
 
 #pragma once
 
-#include <type_traits>
-#include <variant>
-
-#include <atlink/core/Packet.h>
+#include "atlink/core/fsm/IdleFwd.h"
+#include "atlink/core/fsm/SendCommandFwd.h"
 
 namespace ATL_NS {
 namespace Core {
+namespace Fsm {
+namespace State {
 
-class AResponse : public APacket {
-  public:
-    explicit AResponse(const char *tag) : APacket{tag} {}
-    virtual bool accept(AInputVisitor &visitor) = 0;
-    virtual ~AResponse() = default;
-
-  protected:
-    template <typename... Args>
-    bool acceptImpl(AInputVisitor &visitor, Args &&...args) {
-        visitor.reset();
-        (void)visitor.visit(Constants::Optionals::CrLf);
-        return APacket::acceptWithTerm(visitor,
-                                       Constants::Mandatory::CrLf,
-                                       std::forward<Args>(args)...);
+inline Variant Idle::handle(Event event) {
+    switch (event) {
+    case Event::RxReady: {
+        ctx->dispatchUrcs();
+        break;
     }
-};
+    case Event::TxReady: {
+        break;
+    }
+    default: {
+        logger.error() << "unknown event: " << static_cast<int>(event);
+    }
+    }
+    return *this;
+}
 
+inline Variant Idle::process(const Command::SendCommand &cmd) {
+    return SendCommand{ctx, cmd}.start();
+}
+
+} // namespace State
+} // namespace Fsm
 } // namespace Core
 } // namespace ATL_NS

@@ -16,31 +16,12 @@
 //
 
 #pragma once
-
-#include <type_traits>
-#include <variant>
-
-#include <atlink/core/Packet.h>
-
 namespace ATL_NS {
-namespace Core {
+namespace Platform {
+namespace Tags {
 
-class AResponse : public APacket {
-  public:
-    explicit AResponse(const char *tag) : APacket{tag} {}
-    virtual bool accept(AInputVisitor &visitor) = 0;
-    virtual ~AResponse() = default;
+struct Linux {};
 
-  protected:
-    template <typename... Args>
-    bool acceptImpl(AInputVisitor &visitor, Args &&...args) {
-        visitor.reset();
-        (void)visitor.visit(Constants::Optionals::CrLf);
-        return APacket::acceptWithTerm(visitor,
-                                       Constants::Mandatory::CrLf,
-                                       std::forward<Args>(args)...);
-    }
-};
-
-} // namespace Core
+} // namespace Tags
+} // namespace Platform
 } // namespace ATL_NS

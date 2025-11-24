@@ -17,30 +17,21 @@
 
 #pragma once
 
-#include <type_traits>
-#include <variant>
-
-#include <atlink/core/Packet.h>
+#include "atlink/core/Types.h"
 
 namespace ATL_NS {
 namespace Core {
+namespace Fsm {
 
-class AResponse : public APacket {
+class Context {
   public:
-    explicit AResponse(const char *tag) : APacket{tag} {}
-    virtual bool accept(AInputVisitor &visitor) = 0;
-    virtual ~AResponse() = default;
-
-  protected:
-    template <typename... Args>
-    bool acceptImpl(AInputVisitor &visitor, Args &&...args) {
-        visitor.reset();
-        (void)visitor.visit(Constants::Optionals::CrLf);
-        return APacket::acceptWithTerm(visitor,
-                                       Constants::Mandatory::CrLf,
-                                       std::forward<Args>(args)...);
-    }
+    virtual bool send(const ACommand &out) = 0;
+    virtual bool receive(AResponsePack &frc, AResponse *in) = 0;
+    virtual bool canSend() = 0;
+    virtual void dispatchUrcs() = 0;
+    virtual ~Context() = default;
 };
 
+} // namespace Fsm
 } // namespace Core
 } // namespace ATL_NS

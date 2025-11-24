@@ -25,8 +25,17 @@ namespace Core {
 class ACommand : public APacket {
   public:
     explicit ACommand(const char *tag) : APacket{tag} {};
-    virtual void accept(AOutputVisitor &visitor) const = 0;
+    virtual bool accept(AOutputVisitor &visitor) const = 0;
     virtual ~ACommand() = default;
+
+  protected:
+    template <typename... Args>
+    bool acceptImpl(AOutputVisitor &visitor, Args &&...args) const {
+        visitor.reset();
+        return APacket::acceptWithTerm(visitor,
+                                       Constants::Mandatory::Cr,
+                                       std::forward<Args>(args)...);
+    }
 };
 
 } // namespace Core
