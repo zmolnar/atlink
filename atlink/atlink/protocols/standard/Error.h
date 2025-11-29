@@ -23,12 +23,12 @@ namespace ATL_NS {
 namespace Proto {
 namespace Std {
 
-class Error : public Core::AResponse {
+class Error : public Core::Response {
   public:
-    Error() : Core::AResponse("ERROR") {}
+    Error() : Core::Response("ERROR") {}
     ~Error() = default;
 
-    bool accept(Core::AInputVisitor &visitor) override {
+    bool accept(Core::AResponseVisitor &visitor) override {
         return APacket::accept(visitor);
     }
 };

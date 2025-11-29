@@ -53,7 +53,7 @@ class Orchestrator : public Context, public Platform::Api::Subscriber {
     MutableBuffer txbuf{txstorage};
 
   public:
-    void notify(Platform::Api::Subscriber::Event ev) {
+    void notify(Platform::Api::Subscriber::Event ev) override {
         if (Platform::Api::Subscriber::Event::RxReady == ev) {
             events.put(Fsm::Event::RxReady);
         }
@@ -111,11 +111,11 @@ class Orchestrator : public Context, public Platform::Api::Subscriber {
         }
     }
 
-    bool send(const ACommand &out) override {
+    bool send(const Core::Command &out) override {
         auto serializer = Utils::Serializer{txbuf};
         auto success = out.accept(serializer);
         if (success) {
-            auto len = serializer.numberOfBytesWritten();
+            auto len = serializer.written();
             auto n = deviceIO.write(serializer.output());
 
             logger.info() << "TX: command sent (" << len << " bytes)";
@@ -132,19 +132,19 @@ class Orchestrator : public Context, public Platform::Api::Subscriber {
         return success;
     }
 
-    bool receive(AResponsePack &frc, AResponse *in) override {
+    bool receive(AResponsePack &frc, Response *in) override {
 
         auto n = deviceIO.read(rxbuf.subspan(leftover));
         auto input = ReadOnlyText{rxbuf.data(), leftover + n};
 
-        auto tryResponse = [](AResponse *res, ReadOnlyText &txt) -> bool {
+        auto tryResponse = [](Response *res, ReadOnlyText &txt) -> bool {
             if (res == nullptr) {
                 return false;
             }
             Utils::Deserializer deserializer{txt};
             const bool success = res->accept(deserializer);
             if (success) {
-                txt = txt.substr(deserializer.numberOfBytesConsumed());
+                txt = txt.substr(deserializer.consumed());
             }
             return success;
         };
@@ -153,7 +153,7 @@ class Orchestrator : public Context, public Platform::Api::Subscriber {
             Utils::Deserializer deserializer{txt};
             const bool success = frc.accept(deserializer);
             if (success) {
-                txt = txt.substr(deserializer.numberOfBytesConsumed());
+                txt = txt.substr(deserializer.consumed());
             }
             return success;
         };
@@ -259,7 +259,7 @@ class Orchestrator : public Context, public Platform::Api::Subscriber {
         events.put(Fsm::Event::ShutDown);
     }
 
-    ErrorCode sendCommand(AResponsePack *result, ACommand *cmd, AResponse *res) {
+    ErrorCode sendCommand(AResponsePack *result, Core::Command *cmd, Response *res) {
         mtx.lock();
         while (!std::holds_alternative<State::Idle>(state)) {
             condvar.wait(mtx);

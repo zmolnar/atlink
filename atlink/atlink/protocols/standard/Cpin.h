@@ -26,24 +26,24 @@ namespace ATL_NS {
 namespace Proto {
 namespace Std {
 
-class CpinRead : public Core::ACommand {
+class CpinRead : public Core::Command {
   public:
-    CpinRead() : Core::ACommand("+CPIN? ") {}
-    bool accept(Core::AOutputVisitor &visitor) const override {
+    CpinRead() : Core::Command("+CPIN? ") {}
+    bool accept(Core::ACommandVisitor &visitor) const override {
         return APacket::accept(visitor);
     }
 };
 
-class CpinWrite : public Core::ACommand {
+class CpinWrite : public Core::Command {
   public:
-    CpinWrite() : Core::ACommand("+CPIN=") {}
+    CpinWrite() : Core::Command("+CPIN=") {}
     int pin;
-    bool accept(Core::AOutputVisitor &visitor) const override {
+    bool accept(Core::ACommandVisitor &visitor) const override {
         return APacket::accept(visitor, pin);
     }
 };
 
-class CpinReadResponse : public Core::AResponse {
+class CpinReadResponse : public Core::Response {
   public:
     enum class Code {
         Ready,
@@ -57,9 +57,9 @@ class CpinReadResponse : public Core::AResponse {
 
     Core::Enum<Code> code;
 
-    CpinReadResponse() : Core::AResponse("+CPIN: ") {}
+    CpinReadResponse() : Core::Response("+CPIN: ") {}
     ~CpinReadResponse() = default;
-    bool accept(Core::AInputVisitor &visitor) override {
+    bool accept(Core::AResponseVisitor &visitor) override {
         return APacket::accept(visitor, code);
     }
 };

@@ -15,6 +15,7 @@ add_subdirectory(../atlink atlink_build)
 add_executable(atlink_tests
     utDeserializer.cpp
     utEnumStringConverter.cpp
+    utMultiLineResponse.cpp
     utResponse.cpp
     utResponsePack.cpp
     utCommand.cpp

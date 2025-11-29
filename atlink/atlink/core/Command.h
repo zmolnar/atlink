@@ -22,19 +22,16 @@
 namespace ATL_NS {
 namespace Core {
 
-class ACommand : public APacket {
+class Command : public APacket {
   public:
-    explicit ACommand(const char *tag) : APacket{tag} {};
-    virtual bool accept(AOutputVisitor &visitor) const = 0;
-    virtual ~ACommand() = default;
+    explicit Command(const char *tag) : APacket{tag} {};
+    virtual bool accept(ACommandVisitor &visitor) const = 0;
+    virtual ~Command() = default;
 
   protected:
     template <typename... Args>
-    bool acceptImpl(AOutputVisitor &visitor, Args &&...args) const {
-        visitor.reset();
-        return APacket::acceptWithTerm(visitor,
-                                       Constants::Mandatory::Cr,
-                                       std::forward<Args>(args)...);
+    bool acceptImpl(ACommandVisitor &visitor, Args &&...args) const {
+        return APacket::acceptWithTerm(visitor, Constants::Cr, std::forward<Args>(args)...);
     }
 };
 

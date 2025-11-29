@@ -29,17 +29,9 @@ inline static constexpr Core::ReadOnlyText Cr{"\r"};
 inline static constexpr Core::ReadOnlyText Comma{","};
 } // namespace Literals
 
-namespace Optionals {
-inline static constexpr Core::Sequence CrLf{Literals::CrLf, true};
-}
-
-namespace Mandatory {
 inline static constexpr Core::Sequence Cr{Literals::Cr};
 inline static constexpr Core::Sequence CrLf{Literals::CrLf};
 inline static constexpr Core::Sequence Comma{Literals::Comma};
-}
-// inline static constexpr Core::Comma COMMA{};
-// inline static constexpr Core::Term TERM{};
 
 } // namespace Constants
 } // namespace Core

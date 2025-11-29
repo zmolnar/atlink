@@ -23,19 +23,39 @@
 namespace ATL_NS {
 namespace Proto {
 namespace Std {
-namespace At {
+namespace Ati {
 namespace Write {
 
 class Command : public Core::Command {
   public:
-    Command() : Core::Command("AT") {}
+    Command() : Core::Command("ATI") {}
     bool accept(Core::ACommandVisitor &visitor) const override {
         return Core::Command::acceptImpl(visitor);
     }
 };
 
+class Response : public Core::MultiLineResponse {
+  public:
+    class Manufacturer : Core::Line {
+      public:
+        std::array<char, 32U> storage{};
+        Core::LineText name{storage};
+
+        Manufacturer() : Core::Line() {}
+        bool accept(Core::AResponseVisitor &visitor) override {
+            return Core::Line::acceptImpl(visitor, name);
+        }
+    };
+    Response() : Core::MultiLineResponse("+ATI:") {}
+
+    Manufacturer manufacturer{};
+    bool accept(Core::AResponseVisitor &visitor) override {
+        return Core::MultiLineResponse::acceptImpl(visitor, manufacturer);
+    }
+};
+
 } // namespace Write
-} // namespace At
+} // namespace Ati
 } // namespace Std
 } // namespace Proto
 } // namespace ATL_NS

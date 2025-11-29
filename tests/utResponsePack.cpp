@@ -24,61 +24,59 @@
 
 namespace {
 
-using ATL_NS::Core::AInputVisitor;
 using ATL_NS::Core::APacket;
-using ATL_NS::Core::AResponse;
-using ATL_NS::Core::QuotedString;
+using ATL_NS::Core::AResponseVisitor;
+using ATL_NS::Core::QuotedField;
+using ATL_NS::Core::Response;
 
-class FooResponse : public AResponse {
+class FooResponse : public Response {
   public:
     int num{0};
-    char str[32]{};
-    QuotedString strBuf{str};
+    QuotedField<32U> str{};
 
-    FooResponse() : AResponse("+FOO:") {}
+    FooResponse() : Response("+FOO:") {}
 
-    bool accept(AInputVisitor &v) override {
-        return AResponse::acceptImpl(v, num, strBuf);
+    bool accept(AResponseVisitor &v) override {
+        return Response::acceptImpl(v, num, str.storage());
     }
 };
 
-class BarResponse : public AResponse {
+class BarResponse : public Response {
   public:
     int value{0};
 
-    BarResponse() : AResponse("+BAR:") {}
+    BarResponse() : Response("+BAR:") {}
 
-    bool accept(AInputVisitor &v) override {
-        return AResponse::acceptImpl(v, value);
+    bool accept(AResponseVisitor &v) override {
+        return Response::acceptImpl(v, value);
     }
 };
 
-class BazResponse : public AResponse {
+class BazResponse : public Response {
   public:
-    BazResponse() : AResponse("+BAZ:") {}
+    BazResponse() : Response("+BAZ:") {}
 
-    bool accept(AInputVisitor &v) override {
-        return AResponse::acceptImpl(v);
+    bool accept(AResponseVisitor &v) override {
+        return Response::acceptImpl(v);
     }
 };
 
-class DupIntOnly : public AResponse {
-  public:
-    int n{0};
-    DupIntOnly() : AResponse("+DUP:") {}
-    bool accept(AInputVisitor &v) override {
-        return AResponse::acceptImpl(v, n);
-    }
-};
-
-class DupIntStr : public AResponse {
+class DupIntOnly : public Response {
   public:
     int n{0};
-    char s[32]{};
-    QuotedString sbuf{s};
-    DupIntStr() : AResponse("+DUP:") {}
-    bool accept(AInputVisitor &v) override {
-        return AResponse::acceptImpl(v, n, sbuf);
+    DupIntOnly() : Response("+DUP:") {}
+    bool accept(AResponseVisitor &v) override {
+        return Response::acceptImpl(v, n);
+    }
+};
+
+class DupIntStr : public Response {
+  public:
+    int n{0};
+    QuotedField<32U> s{};
+    DupIntStr() : Response("+DUP:") {}
+    bool accept(AResponseVisitor &v) override {
+        return Response::acceptImpl(v, n, s.storage());
     }
 };
 
@@ -99,9 +97,9 @@ SCENARIO("ResponsePack parses the first matching response type") {
                 auto *foo = pack.getIf<FooResponse>();
                 REQUIRE(foo != nullptr);
                 REQUIRE(foo->num == 7);
-                REQUIRE(std::strcmp(foo->str, "hello") == 0);
+                REQUIRE(std::string_view{"hello"} == foo->str.view());
                 // +FOO: 7, "hello"\r\n  -> sanity check consumed bytes
-                REQUIRE(d.numberOfBytesConsumed() > 0);
+                REQUIRE(d.consumed() > 0);
             }
         }
 
@@ -115,7 +113,7 @@ SCENARIO("ResponsePack parses the first matching response type") {
                 auto *bar = pack.getIf<BarResponse>();
                 REQUIRE(bar != nullptr);
                 REQUIRE(bar->value == 42);
-                REQUIRE(d.numberOfBytesConsumed() > 0);
+                REQUIRE(d.consumed() > 0);
             }
         }
 
@@ -128,7 +126,7 @@ SCENARIO("ResponsePack parses the first matching response type") {
                 REQUIRE(pack.holds<BazResponse>());
                 auto *baz = pack.getIf<BazResponse>();
                 REQUIRE(baz != nullptr);
-                REQUIRE(d.numberOfBytesConsumed() > 0);
+                REQUIRE(d.consumed() > 0);
             }
         }
 
@@ -160,7 +158,7 @@ SCENARIO("ResponsePack parses the first matching response type") {
                 auto *foo = pack.getIf<FooResponse>();
                 REQUIRE(foo != nullptr);
                 REQUIRE(foo->num == 1);
-                REQUIRE(std::strcmp(foo->str, "x") == 0);
+                REQUIRE(std::string_view{"x"} == foo->str.view());
             }
         }
     }
@@ -195,7 +193,79 @@ SCENARIO("ResponsePack respects ordering with duplicate tags") {
                 auto *r = pack.getIf<DupIntStr>();
                 REQUIRE(r != nullptr);
                 REQUIRE(r->n == 5);
-                REQUIRE(std::strcmp(r->s, "five") == 0);
+                REQUIRE(std::string_view{"five"} == r->s.view());
+            }
+        }
+    }
+}
+
+SCENARIO("ResponsePack with a single response type works and accessors behave correctly") {
+
+    GIVEN("A pack with a single BarResponse") {
+        ATL_NS::Core::ResponsePack<BarResponse> pack{};
+
+        THEN("Initially it holds monostate") {
+            const auto &v = pack.getValue();
+            // We can't refer to monostate via ResponsePack::Variant directly here
+            // but we can infer it's not any of our response types:
+            REQUIRE_FALSE(pack.holds<BarResponse>());
+            REQUIRE(pack.getIf<BarResponse>() == nullptr);
+        }
+
+        WHEN("A matching BarResponse input is parsed") {
+            atlink::Utils::Deserializer d{"+BAR: 17\r\n"};
+            const bool ok = pack.accept(d);
+
+            THEN("The single response is held and accessors reflect that") {
+                REQUIRE(ok);
+                REQUIRE(pack.holds<BarResponse>());
+
+                // non-const getIf
+                auto *bar = pack.getIf<BarResponse>();
+                REQUIRE(bar != nullptr);
+                REQUIRE(bar->value == 17);
+
+                // const getIf
+                const auto &cpack = pack;
+                const auto *cbar = cpack.getIf<BarResponse>();
+                REQUIRE(cbar != nullptr);
+                REQUIRE(cbar->value == 17);
+
+                // getValue() should now hold BarResponse
+                const auto &var = pack.getValue();
+                REQUIRE(std::holds_alternative<BarResponse>(var));
+            }
+        }
+
+        WHEN("Input does not match BarResponse") {
+            atlink::Utils::Deserializer d{"+FOO: 1, \"x\"\r\n"};
+            const bool ok = pack.accept(d);
+
+            THEN("Parsing fails and the pack remains in monostate") {
+                REQUIRE_FALSE(ok);
+                REQUIRE_FALSE(pack.holds<BarResponse>());
+                REQUIRE(pack.getIf<BarResponse>() == nullptr);
+            }
+        }
+
+        WHEN("Reset is called after a successful parse") {
+            atlink::Utils::Deserializer d1{"+BAR: 99\r\n"};
+            REQUIRE(pack.accept(d1));
+            REQUIRE(pack.holds<BarResponse>());
+
+            pack.reset();
+
+            THEN("The pack no longer holds BarResponse and behaves as empty") {
+                REQUIRE_FALSE(pack.holds<BarResponse>());
+                REQUIRE(pack.getIf<BarResponse>() == nullptr);
+
+                // And it can be reused
+                atlink::Utils::Deserializer d2{"+BAR: 5\r\n"};
+                REQUIRE(pack.accept(d2));
+                REQUIRE(pack.holds<BarResponse>());
+                auto *bar = pack.getIf<BarResponse>();
+                REQUIRE(bar != nullptr);
+                REQUIRE(bar->value == 5);
             }
         }
     }

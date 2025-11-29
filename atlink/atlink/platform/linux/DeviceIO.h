@@ -74,6 +74,7 @@ inline DeviceIO::DeviceIO() : logger{"deviceio"} {
     if (fd >= 0) {
         run = true;
         poller = std::thread(&DeviceIO::pollLoop, this);
+        logger.setLogLevel(Api::Log::Level::Trace);
         logger.info() << "poller thread started";
     } else {
         logger.error() << "DeviceIO initialization failed";

@@ -23,13 +23,13 @@ namespace ATL_NS {
 namespace Proto {
 namespace Std {
 
-class Ok : public Core::AResponse {
+class Ok : public Core::Response {
   public:
-    Ok() : Core::AResponse("OK") {}
+    Ok() : Core::Response("OK") {}
     ~Ok() = default;
 
-    bool accept(Core::AInputVisitor &visitor) override {
-        return AResponse::acceptImpl(visitor);
+    bool accept(Core::AResponseVisitor &visitor) override {
+        return Response::acceptImpl(visitor);
     }
 };
 

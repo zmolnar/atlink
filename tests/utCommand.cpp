@@ -24,19 +24,19 @@
 
 namespace {
 
-class TestCommand : public ATL_NS::Core::ACommand {
+class TestCommand : public ATL_NS::Core::Command {
   public:
     enum class IntEnum { Zero = 0U, One, Two, Three, Four };
     enum class StrEnum { Five, Six, Seven, Eight, Nine };
 
     int num{123456};
-    const char *str{"test \"string\""};
+    ATL_NS::Core::QuotedField<32U> str{};
     ATL_NS::Core::Enum<IntEnum> intEnum{};
     ATL_NS::Core::Enum<StrEnum> strEnum{};
 
-    TestCommand() : ATL_NS::Core::ACommand("+TEST CMD:") {}
-    bool accept(ATL_NS::Core::AOutputVisitor &visitor) const override {
-        return APacket::accept(visitor, num, str, intEnum, strEnum);
+    TestCommand() : ATL_NS::Core::Command("+TEST CMD:") {}
+    bool accept(ATL_NS::Core::ACommandVisitor &visitor) const override {
+        return APacket::accept(visitor, num, str.view(), intEnum, strEnum);
     }
 };
 
@@ -59,6 +59,7 @@ SCENARIO("Command can accept visitor") {
 
     GIVEN("A command") {
         auto cmd = TestCommand{};
+        cmd.str.stream() << "test \"string\"";
         cmd.intEnum = TestCommand::IntEnum::Two;
         cmd.strEnum = TestCommand::StrEnum::Seven;
         WHEN("Serialized") {
@@ -67,9 +68,8 @@ SCENARIO("Command can accept visitor") {
             cmd.accept(serializer);
             THEN("The resulting string is as expected") {
                 std::string expected{"+TEST CMD:123456,\"test \\\"string\\\"\",2,Seven\r\n"};
-                REQUIRE(serializer.isValid());
                 REQUIRE(expected == buf);
-                REQUIRE(44U == serializer.numberOfBytesWritten());
+                REQUIRE(44U == serializer.written());
             }
         }
     }

@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include "atlink/core/Constants.h"
 #include "atlink/core/Packet.h"
 
 #include <charconv>
@@ -24,44 +25,38 @@
 namespace ATL_NS {
 namespace Utils {
 
-class Deserializer : public Core::AInputVisitor {
+class Deserializer : public Core::AResponseVisitor {
 
     Core::ReadOnlyText input;
     size_t length = 0;
-    bool valid = true;
 
   public:
     explicit Deserializer(Core::ReadOnlyText input) : input(input) {}
     ~Deserializer() = default;
 
-    void reset() override {
+    void rewind() override {
         length = 0U;
-        valid = true;
     }
 
     bool visit(const Core::Sequence &seq) override {
         skipWhitespaces();
-        if (valid && (0U < seq.length())) {
-            auto n = seq.parse(input.substr(length));
-            valid = (0U < n) || seq.isOptional();
-            length += n;
-        }
-        return valid;
+        auto n = seq.parse(input.substr(length));
+        length += n;
+        return (0U < n);
+        ;
     }
 
-    bool visit(Core::QuotedString &str) override {
+    bool visit(Core::QuotedStringStorage str) override {
         skipWhitespaces();
         std::string_view in = input.substr(length);
-
-        auto consumed = parseStringLiteral(in, str.buf);
-        valid = valid && (0U < consumed);
+        auto consumed = parseStringLiteral(in, str);
         length += consumed;
-        return valid;
+        return (0U < consumed);
     }
 
-    bool visit(Core::RawUntilTerm &raw) override {
+    bool visit(Core::LineText &line) override {
         std::array<char, 3U> term{};
-        auto success = Core::Term{}.stringify(term);
+        auto success = Core::Constants::CrLf.stringify(term);
         assert(success);
 
         std::string_view in = input.substr(length);
@@ -69,28 +64,24 @@ class Deserializer : public Core::AInputVisitor {
 
         std::size_t take = 0U;
         if (pos == std::string_view::npos) {
-            take = std::min<std::size_t>(in.size(), raw.buf.size());
+            take = std::min<std::size_t>(in.size(), line.buf.size());
         } else {
-            take = std::min<std::size_t>(pos, raw.buf.size());
+            take = std::min<std::size_t>(pos, line.buf.size());
         }
 
         for (std::size_t i = 0; i < take; ++i) {
-            raw.buf[i] = in[i];
+            line.buf[i] = in[i];
         }
 
         length += take;
-        return valid;
+        return (0U < take);
     }
 
     bool visit(Core::AEnum &e) override {
         skipWhitespaces();
         auto n = e.parse(input.substr(length));
-        if (valid && (0U < n)) {
-            length += n;
-        } else {
-            valid = false;
-        }
-        return valid;
+        length += n;
+        return (0U < n);
     }
 
     bool visit(int &i) override {
@@ -99,21 +90,15 @@ class Deserializer : public Core::AInputVisitor {
         const auto *last = input.data() + input.size();
         int num = 0U;
         auto result = std::from_chars(first, last, num);
-
-        if (result.ec == std::errc{}) {
+        auto success = (result.ec == std::errc{});
+        if (success) {
             i = num;
             length += result.ptr - (input.data() + length);
-        } else {
-            valid = false;
         }
-        return valid;
+        return success;
     }
 
-    bool isValid() const {
-        return valid;
-    }
-
-    size_t numberOfBytesConsumed() const {
+    size_t consumed() const override {
         return length;
     }
 

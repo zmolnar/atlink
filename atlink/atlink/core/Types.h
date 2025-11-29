@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <charconv>
 #include <gsl/span>
 #include <string_view>
 
@@ -26,26 +27,16 @@ namespace Core {
 using ReadOnlyText = std::string_view;
 using MutableBuffer = gsl::span<char>;
 
-struct QuotedString {
-    MutableBuffer buf;
-};
-
-struct RawUntilTerm {
+struct LineText {
     MutableBuffer buf;
 };
 
 class Sequence {
     const ReadOnlyText seq;
-    const bool optional;
 
   public:
-    explicit constexpr Sequence(ReadOnlyText seq, bool optional = false)
-        : seq{seq}, optional{optional} {}
+    explicit constexpr Sequence(ReadOnlyText seq) : seq{seq} {}
 
-    bool isOptional() const {
-        return optional;
-    }
-    
     size_t stringify(MutableBuffer output) const {
         size_t n = 0U;
         if (seq.size() < output.size()) {
@@ -69,28 +60,100 @@ class Sequence {
     }
 };
 
-using Tag = Sequence;
-
-class Comma : public Sequence {
+class FixedBufStream {
   public:
-    constexpr Comma() : Sequence{","} {}
+    FixedBufStream(char *data, std::size_t size) : buf{data}, cap{size}, len{0} {}
+
+    std::size_t size() const {
+        return len;
+    }
+    std::size_t capacity() const {
+        return cap;
+    }
+
+    void clear() {
+        if (cap > 0)
+            buf[0] = '\0';
+        len = 0;
+    }
+
+    FixedBufStream &operator<<(const char *s) {
+        if (!s)
+            return *this;
+        while (*s && len < cap - 1) {
+            buf[len++] = *s++;
+        }
+        buf[std::min(len, cap - 1)] = '\0';
+        return *this;
+    }
+
+    FixedBufStream &operator<<(char c) {
+        if (len < cap - 1) {
+            buf[len++] = c;
+            buf[len] = '\0';
+        }
+        return *this;
+    }
+
+    FixedBufStream &operator<<(bool v) {
+        return (*this) << (v ? "true" : "false");
+    }
+
+    template <class T, typename std::enable_if<std::is_integral<T>::value, int>::type = 0>
+    FixedBufStream &operator<<(T v) {
+        if (len >= cap - 1)
+            return *this;
+
+        char *first = buf + len;
+        char *last = buf + cap - 1; // reserve for '\0'
+        auto rc = std::to_chars(first, last, v);
+        if (rc.ec == std::errc{}) {
+            len += static_cast<std::size_t>(rc.ptr - first);
+            buf[len] = '\0';
+        }
+        return *this;
+    }
+
+  private:
+    char *buf;
+    std::size_t cap;
+    std::size_t len;
 };
 
-class Term : public Sequence {
-  public:
-    constexpr Term() : Sequence{"\r\n"} {}
-};
+using QuotedStringView = ReadOnlyText;
+using QuotedStringStorage = MutableBuffer;
 
-class CrLf : public Sequence {
+template <std::size_t N>
+class QuotedField {
   public:
-    constexpr CrLf() : Sequence{"\r\n"} {}
-};
+    QuotedField() : fb{chars.data(), chars.size()} {
+        clear();
+    }
 
-class AEnum {
-  public:
-    virtual size_t stringify(MutableBuffer output) const = 0;
-    virtual size_t parse(ReadOnlyText input) = 0;
-    virtual ~AEnum() = default;
+    QuotedStringStorage storage() {
+        return chars;
+    }
+
+    QuotedStringView view() const {
+        return data();
+    }
+
+    FixedBufStream &stream() {
+        return fb;
+    }
+
+    void clear() {
+        fb.clear();
+    }
+
+    std::string_view data() const {
+        auto len = strnlen(chars.data(), chars.size());
+        return std::string_view{chars.data(), len};
+    }
+
+  private:
+    std::array<char, N> chars{};
+    FixedBufStream fb;
 };
 
 } // namespace Core

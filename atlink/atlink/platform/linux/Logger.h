@@ -52,21 +52,23 @@ class Logger {
         const char *lv = levelName(lvl);
 
         // Select color based on severity
+        static constexpr const char *COLOR_GREEN = "\033[32m";
         static constexpr const char *COLOR_RED = "\033[31m";
         static constexpr const char *COLOR_YELLOW = "\033[33m";
         static constexpr const char *COLOR_RESET = "\033[0m";
 
         const char *color = "";
-        const char *reset = "";
+        const char *reset = COLOR_RESET;
 
         switch (lvl) {
         case Level::Error:
             color = COLOR_RED;
-            reset = COLOR_RESET;
             break;
         case Level::Warn:
             color = COLOR_YELLOW;
-            reset = COLOR_RESET;
+            break;
+        case Level::Debug:
+            color = COLOR_GREEN;
             break;
         default:
             break;

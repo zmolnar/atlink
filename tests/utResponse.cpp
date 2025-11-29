@@ -23,19 +23,20 @@
 
 namespace {
 
-class TestResponse : public ATL_NS::Core::AResponse {
+class TestResponse : public ATL_NS::Core::Response {
   public:
     enum class IntEnum { Zero = 0U, One, Two, Three, Four };
     enum class StrEnum { Five, Six, Seven, Eight, Nine };
 
     int num;
-    std::array<char,32U> str {};
-    ATL_NS::Core::QuotedString strBuf{str};
+    ATL_NS::Core::QuotedField<32U> str{};
     ATL_NS::Core::Enum<IntEnum> intEnum{};
     ATL_NS::Core::Enum<StrEnum> strEnum{};
-    TestResponse() : ATL_NS::Core::AResponse("+TEST:") {}
-    bool accept(ATL_NS::Core::AInputVisitor &visitor) {
-        return AResponse::acceptImpl(visitor, num, strBuf, intEnum, strEnum);
+
+    TestResponse() : ATL_NS::Core::Response("+TEST:") {}
+
+    bool accept(ATL_NS::Core::AResponseVisitor &visitor) {
+        return Response::acceptImpl(visitor, num, str.storage(), intEnum, strEnum);
     }
 };
 
@@ -58,29 +59,81 @@ SCENARIO("Response can accept visitor") {
 
     GIVEN("A response") {
         auto testResponse = TestResponse{};
+
         WHEN("A valid input string is visited") {
-            atlink::Utils::Deserializer deserializer{"+TEST: 322, \"input string\",   4, Five   \r\n"};
+            atlink::Utils::Deserializer deserializer{
+                "+TEST: 322, \"input string\",   4, Five   \r\n"};
             auto success = testResponse.accept(deserializer);
             THEN("The proper values are deserialized") {
                 REQUIRE(success);
-                REQUIRE(42U == deserializer.numberOfBytesConsumed());
+                REQUIRE(42U == deserializer.consumed());
                 REQUIRE(322 == testResponse.num);
-                REQUIRE(0 == strcmp("input string", testResponse.str.data()));
+                REQUIRE(std::string_view{"input string"} == testResponse.str.view());
                 REQUIRE(TestResponse::IntEnum::Four == testResponse.intEnum.get());
                 REQUIRE(TestResponse::StrEnum::Five == testResponse.strEnum.get());
             }
         }
 
         WHEN("A valid input string with leading CRLF is visited") {
-            atlink::Utils::Deserializer deserializer{"\r\n+TEST: 322, \"input string\",   4, Five   \r\n"};
+            atlink::Utils::Deserializer deserializer{
+                "\r\n+TEST: 322, \"input string\",   4, Five   \r\n"};
             auto success = testResponse.accept(deserializer);
             THEN("The proper values are deserialized") {
                 REQUIRE(success);
-                REQUIRE(44U == deserializer.numberOfBytesConsumed());
+                REQUIRE(44U == deserializer.consumed());
                 REQUIRE(322 == testResponse.num);
-                REQUIRE(0 == strcmp("input string", testResponse.str.data()));
+                REQUIRE(std::string_view{"input string"} == testResponse.str.view());
                 REQUIRE(TestResponse::IntEnum::Four == testResponse.intEnum.get());
                 REQUIRE(TestResponse::StrEnum::Five == testResponse.strEnum.get());
+            }
+        }
+
+        WHEN("A valid input string with leading whitespaces before tag is visited") {
+            atlink::Utils::Deserializer deserializer{
+                "   +TEST: 322, \"input string\",   4, Five   \r\n"};
+            auto success = testResponse.accept(deserializer);
+            THEN("The response is accepted and leading whitespace is consumed") {
+                REQUIRE(success);
+                // original 42 bytes + 3 leading spaces
+                REQUIRE(45U == deserializer.consumed());
+                REQUIRE(322 == testResponse.num);
+                REQUIRE(std::string_view{"input string"} == testResponse.str.view());
+                REQUIRE(TestResponse::IntEnum::Four == testResponse.intEnum.get());
+                REQUIRE(TestResponse::StrEnum::Five == testResponse.strEnum.get());
+            }
+        }
+
+        WHEN("An input with an invalid tag is visited") {
+            atlink::Utils::Deserializer deserializer{
+                "+TESX: 322, \"input string\",   4, Five   \r\n"};
+            auto success = testResponse.accept(deserializer);
+            THEN("The response is rejected and no input is consumed") {
+                REQUIRE_FALSE(success);
+                REQUIRE(0U == deserializer.consumed());
+            }
+        }
+
+        WHEN("An input with an invalid integer field is visited") {
+            atlink::Utils::Deserializer deserializer{
+                "+TEST: ABC, \"input string\",   4, Five   \r\n"};
+            auto success = testResponse.accept(deserializer);
+            THEN("The response is rejected and only part of the input is consumed") {
+                REQUIRE_FALSE(success);
+                // We expect that at least the tag is consumed, but not the whole line
+                REQUIRE(deserializer.consumed() > 0U);
+                REQUIRE(deserializer.consumed() <
+                        std::string_view{"+TEST: ABC, \"input string\",   4, Five   \r\n"}.size());
+            }
+        }
+
+        WHEN("An input missing the terminating CRLF is visited") {
+            atlink::Utils::Deserializer deserializer{
+                "+TEST: 322, \"input string\",   4, Five   "}; // no \r\n at the end
+            auto success = testResponse.accept(deserializer);
+            THEN("The response is rejected after consuming all available input") {
+                REQUIRE_FALSE(success);
+                auto input_view = std::string_view{"+TEST: 322, \"input string\",   4, Five   "};
+                REQUIRE(deserializer.consumed() == input_view.size());
             }
         }
     }

@@ -36,7 +36,7 @@ class Device {
         orchestrator.loop();
     }
 
-    bool sendCommand(AResponsePack *result, ACommand *cmd, AResponse *res) {
+    bool sendCommand(AResponsePack *result, Command *cmd, Response *res) {
         auto ec = orchestrator.sendCommand(result, cmd, res);
         return (ErrorCode::NoError == ec);
     }

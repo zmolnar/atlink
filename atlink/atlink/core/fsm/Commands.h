@@ -32,8 +32,8 @@ namespace Command {
 struct SendCommand {
     ErrorCode *ec;
     AResponsePack *result;
-    const ACommand *command;
-    AResponse *response;
+    const Core::Command *command;
+    Response *response;
     Platform::Semaphore *sem;
 };
 

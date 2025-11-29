@@ -25,20 +25,55 @@
 namespace ATL_NS {
 namespace Core {
 
-class AResponse : public APacket {
+class Line : public APacket {
   public:
-    explicit AResponse(const char *tag) : APacket{tag} {}
-    virtual bool accept(AInputVisitor &visitor) = 0;
-    virtual ~AResponse() = default;
+    Line() : APacket{} {}
+    explicit Line(const char *tag) : APacket{tag} {}
+    virtual bool accept(AResponseVisitor &visitor) = 0;
 
   protected:
     template <typename... Args>
-    bool acceptImpl(AInputVisitor &visitor, Args &&...args) {
-        visitor.reset();
-        (void)visitor.visit(Constants::Optionals::CrLf);
-        return APacket::acceptWithTerm(visitor,
-                                       Constants::Mandatory::CrLf,
-                                       std::forward<Args>(args)...);
+    bool acceptImpl(AResponseVisitor &visitor, Args &&...args) {
+        if (0U < tag.length()) {
+            (void)visitor.visit(tag);
+        }
+        return APacket::accept(visitor, std::forward<Args>(args)...);
+    }
+};
+
+class Response : public APacket {
+  public:
+    explicit Response(const char *tag) : APacket{tag} {}
+    virtual bool accept(AResponseVisitor &visitor) = 0;
+    virtual ~Response() = default;
+
+  protected:
+    template <typename... Args>
+    bool acceptImpl(AResponseVisitor &visitor, Args &&...args) {
+        (void)visitor.visit(Constants::CrLf);
+        return APacket::acceptWithTerm(visitor, Constants::CrLf, std::forward<Args>(args)...);
+    }
+};
+
+class MultiLineResponse : public Response {
+  public:
+    explicit MultiLineResponse(const char *tag) : Response{tag} {}
+    virtual bool accept(AResponseVisitor &visitor) override = 0;
+    virtual ~MultiLineResponse() = default;
+
+  protected:
+    template <typename... LineTs>
+    bool acceptImpl(AResponseVisitor &visitor, LineTs &&...lines) {
+        static_assert((std::is_base_of<Line, std::remove_reference_t<LineTs>>::value && ...),
+                      "MultiLineResponse::acceptImpl expects all LineTs to derive from Line");
+        (void)visitor.visit(Constants::CrLf);
+        if (0U < tag.length()) {
+            if (!visitor.visit(tag)) {
+                return false;
+            }
+        }
+        (void)visitor.visit(Constants::CrLf);
+        return (lines.accept(visitor) && ...);
     }
 };
 

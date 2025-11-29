@@ -25,8 +25,8 @@ namespace Fsm {
 
 class Context {
   public:
-    virtual bool send(const ACommand &out) = 0;
-    virtual bool receive(AResponsePack &frc, AResponse *in) = 0;
+    virtual bool send(const Core::Command &out) = 0;
+    virtual bool receive(AResponsePack &frc, Response *in) = 0;
     virtual bool canSend() = 0;
     virtual void dispatchUrcs() = 0;
     virtual ~Context() = default;

@@ -24,7 +24,7 @@ namespace ATL_NS {
 namespace Proto {
 namespace Std {
 
-class CmsError : public Core::AResponse {
+class CmsError : public Core::Response {
   public:
     enum class Code {
         Unknown = 500,
@@ -32,9 +32,9 @@ class CmsError : public Core::AResponse {
 
     Core::Enum<Code> code{};
 
-    CmsError() : Core::AResponse("+CMS ERROR:") {}
+    CmsError() : Core::Response("+CMS ERROR:") {}
     ~CmsError() = default;
-    bool accept(Core::AInputVisitor &visitor) override {
+    bool accept(Core::AResponseVisitor &visitor) override {
         return APacket::accept(visitor, code);
     }
 };

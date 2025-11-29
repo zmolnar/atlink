@@ -18,7 +18,7 @@
 #include "atlink/core/Device.h"
 #include "atlink/core/FinalResultCode.h"
 #include "atlink/platform/Facade.h"
-#include "atlink/protocols/standard/At.h"
+#include "atlink/protocols/standard/Ati.h"
 
 #include <algorithm>
 #include <atomic>
@@ -142,18 +142,20 @@ int main() {
     // Periodic AT sender thread
     std::thread atThread([&device, &logger] {
         using ATL_NS::Core::FinalResultCode;
-        using ATL_NS::Proto::Std::At::Write::Command;
+        using AtiCmd = ATL_NS::Proto::Std::Ati::Write::Command;
+        using AtiRes = ATL_NS::Proto::Std::Ati::Write::Response;
 
         while (!g_stop.load(std::memory_order_relaxed)) {
-            Command cmd{};
+            AtiCmd cmd{};
+            AtiRes res{};
             FinalResultCode<> frc{};
 
-            bool ok = device.sendCommand(&frc, &cmd, nullptr);
+            bool ok = device.sendCommand(&frc, &cmd, &res);
             if (!ok) {
-                logger.error() << "AT command failed (sendCommand error)";
+                logger.error() << "ATI command failed (sendCommand error)";
             } else {
                 // Inspect final result code if you want to log more detail
-                logger.info() << "AT command succeeded";
+                logger.info() << "ATI command succeeded";
             }
 
             for (int i = 0; i < 10 && !g_stop.load(std::memory_order_relaxed); ++i) {

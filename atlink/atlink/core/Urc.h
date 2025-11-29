@@ -24,15 +24,15 @@
 namespace ATL_NS {
 namespace Core {
 
-class AnyUrc : public AResponse {
+class AnyUrc : public Response {
   public:
     std::array<char, 512U> storage{};
-    RawUntilTerm payload{storage};
+    LineText payload{storage};
 
-    AnyUrc() : AResponse("") {}
+    AnyUrc() : Response("") {}
 
-    bool accept(AInputVisitor &visitor) override {
-        return AResponse::acceptImpl(visitor, payload);
+    bool accept(AResponseVisitor &visitor) override {
+        return Response::acceptImpl(visitor, payload);
     }
 };
 

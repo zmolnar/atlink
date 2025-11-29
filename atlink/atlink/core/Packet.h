@@ -24,54 +24,53 @@
 namespace ATL_NS {
 namespace Core {
 
-class AOutputVisitor {
+class ACommandVisitor {
   public:
-    virtual void reset() = 0;
-    virtual bool visit(const Tag &tag) = 0;
-    virtual bool visit(const Comma &comma) = 0;
-    virtual bool visit(const Term &term) = 0;
-    virtual bool visit(const ReadOnlyText str) = 0;
-    virtual bool visit(const AEnum &e) = 0;
-    virtual bool visit(int i) = 0;
-    virtual ~AOutputVisitor() = default;
+    virtual bool visit(const Sequence &) = 0;
+    virtual bool visit(const QuotedStringView) = 0;
+    virtual bool visit(const AEnum &) = 0;
+    virtual bool visit(int) = 0;
+    virtual size_t written() const = 0;
+    virtual ~ACommandVisitor() = default;
 };
 
-class AInputVisitor {
+class AResponseVisitor {
   public:
-    virtual void reset() = 0;
-    // virtual bool visit(const Tag &tag) = 0;
-    // virtual bool visit(const Comma &comma) = 0;
-    // virtual bool visit(const Term &term) = 0;
-    virtual bool visit(const Sequence &seq) = 0;
-    virtual bool visit(QuotedString &str) = 0;
-    virtual bool visit(RawUntilTerm &buf) = 0;
-    virtual bool visit(AEnum &e) = 0;
-    virtual bool visit(int &i) = 0;
-    virtual ~AInputVisitor() = default;
+    virtual bool visit(const Sequence &) = 0;
+    virtual bool visit(QuotedStringStorage) = 0;
+    virtual bool visit(LineText &) = 0;
+    virtual bool visit(AEnum &) = 0;
+    virtual bool visit(int &) = 0;
+    virtual void rewind() = 0;
+    virtual size_t consumed() const = 0;
+    virtual ~AResponseVisitor() = default;
 };
 
 class APacket {
   public:
-    Tag tag;
+    Sequence tag;
 
+    APacket() : tag{""} {}
     explicit APacket(ReadOnlyText tag) : tag{tag} {}
     virtual ~APacket() = default;
 
   protected:
     template <typename... Args>
-    bool accept(AInputVisitor &visitor, Args &&...args) {
-        return acceptWithTerm(visitor, Constants::Mandatory::CrLf, std::forward<Args>(args)...);
+    bool accept(AResponseVisitor &visitor, Args &&...args) {
+        return acceptWithTerm(visitor, Constants::CrLf, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    bool accept(AOutputVisitor &visitor, Args &&...args) const {
-        return acceptWithTerm(visitor, Constants::Mandatory::CrLf, std::forward<Args>(args)...);
+    bool accept(ACommandVisitor &visitor, Args &&...args) const {
+        return acceptWithTerm(visitor, Constants::CrLf, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    bool acceptWithTerm(AInputVisitor &visitor, const Sequence &term, Args &&...args) {
-        if (!visitor.visit(tag))
-            return false;
+    bool acceptWithTerm(AResponseVisitor &visitor, const Sequence &term, Args &&...args) {
+        if (tag.length() > 0U) {
+            if (!visitor.visit(tag))
+                return false;
+        }
         if constexpr (sizeof...(args) > 0) {
             if (!visitWithCommas(visitor, std::forward<Args>(args)...))
                 return false;
@@ -80,9 +79,11 @@ class APacket {
     }
 
     template <typename... Args>
-    bool acceptWithTerm(AOutputVisitor &visitor, const Sequence &term, Args &&...args) const {
-        if (!visitor.visit(tag))
-            return false;
+    bool acceptWithTerm(ACommandVisitor &visitor, const Sequence &term, Args &&...args) const {
+        if (tag.length() > 0U) {
+            if (!visitor.visit(tag))
+                return false;
+        }
         if constexpr (sizeof...(args) > 0) {
             if (!visitWithCommas(visitor, std::forward<Args>(args)...))
                 return false;
@@ -96,7 +97,7 @@ class APacket {
         if (!visitor.visit(std::forward<First>(first)))
             return false;
         if constexpr (sizeof...(rest) > 0) {
-            if (!visitor.visit(Constants::Mandatory::Comma))
+            if (!visitor.visit(Constants::Comma))
                 return false;
             return visitWithCommas(visitor, std::forward<Rest>(rest)...);
         }

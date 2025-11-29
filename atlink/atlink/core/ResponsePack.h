@@ -28,15 +28,15 @@ namespace Core {
 
 class AResponsePack {
   public:
-    virtual bool accept(AInputVisitor &visitor) = 0;
+    virtual bool accept(AResponseVisitor &visitor) = 0;
     virtual ~AResponsePack() = default;
 };
 
 template <typename... Rs>
 class ResponsePack : public AResponsePack {
     static_assert(sizeof...(Rs) > 0, "ResponsePack requires at least one response type");
-    static_assert((std::is_base_of<AResponse, Rs>::value && ...),
-                  "All Rs must derive from ATL_NS::Core::AResponse");
+    static_assert((std::is_base_of<Response, Rs>::value && ...),
+                  "All Rs must derive from ATL_NS::Core::Response");
     static_assert((std::is_default_constructible<Rs>::value && ...),
                   "All Rs must be default-constructible for trial parsing");
 
@@ -51,7 +51,7 @@ class ResponsePack : public AResponsePack {
 
     // Try to parse with each alternative in order.
     // On success, stores the parsed object and returns true.
-    bool accept(AInputVisitor &visitor) override {
+    bool accept(AResponseVisitor &visitor) override {
         return tryAll<0, Rs...>(visitor);
     }
 
@@ -79,9 +79,10 @@ class ResponsePack : public AResponsePack {
 
   private:
     template <typename T>
-    bool tryOne(AInputVisitor &visitor) {
-        static_assert(std::is_base_of<AResponse, T>::value, "T must derive from AResponse");
+    bool tryOne(AResponseVisitor &visitor) {
+        static_assert(std::is_base_of<Response, T>::value, "T must derive from Response");
         T candidate{};
+        visitor.rewind();
         auto match = candidate.accept(visitor);
         if (match) {
             value.template emplace<T>(std::move(candidate));
@@ -90,12 +91,12 @@ class ResponsePack : public AResponsePack {
     }
 
     template <std::size_t, typename First>
-    bool tryAll(AInputVisitor &visitor) {
+    bool tryAll(AResponseVisitor &visitor) {
         return tryOne<First>(visitor);
     }
 
     template <std::size_t Index, typename First, typename Second, typename... Rest>
-    bool tryAll(AInputVisitor &visitor) {
+    bool tryAll(AResponseVisitor &visitor) {
         if (tryOne<First>(visitor)) {
             return true;
         }
