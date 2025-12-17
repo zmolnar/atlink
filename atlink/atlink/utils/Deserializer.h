@@ -38,48 +38,9 @@ class Deserializer : public Core::AResponseVisitor {
         length = 0U;
     }
 
-    bool visit(const Core::Sequence &seq) override {
+    bool visit(Core::AField &field) override {
         skipWhitespaces();
-        auto n = seq.parse(input.substr(length));
-        length += n;
-        return (0U < n);
-        ;
-    }
-
-    bool visit(Core::QuotedStringStorage str) override {
-        skipWhitespaces();
-        std::string_view in = input.substr(length);
-        auto consumed = parseStringLiteral(in, str);
-        length += consumed;
-        return (0U < consumed);
-    }
-
-    bool visit(Core::LineText &line) override {
-        std::array<char, 3U> term{};
-        auto success = Core::Constants::CrLf.stringify(term);
-        assert(success);
-
-        std::string_view in = input.substr(length);
-        auto pos = in.find(term.data());
-
-        std::size_t take = 0U;
-        if (pos == std::string_view::npos) {
-            take = std::min<std::size_t>(in.size(), line.buf.size());
-        } else {
-            take = std::min<std::size_t>(pos, line.buf.size());
-        }
-
-        for (std::size_t i = 0; i < take; ++i) {
-            line.buf[i] = in[i];
-        }
-
-        length += take;
-        return (0U < take);
-    }
-
-    bool visit(Core::AEnum &e) override {
-        skipWhitespaces();
-        auto n = e.parse(input.substr(length));
+        auto n = field.parse(input.substr(length));
         length += n;
         return (0U < n);
     }
@@ -112,23 +73,6 @@ class Deserializer : public Core::AResponseVisitor {
         } else {
             length = input.size();
         }
-    }
-
-    static size_t parseStringLiteral(std::string_view in, gsl::span<char> out) {
-        static constexpr auto npos = std::string_view::npos;
-        auto start = in.find("\"");
-        auto end = (npos != start) ? in.find("\"", start + 1U) : npos;
-        size_t length = 0U;
-        if ((npos != start) && (npos != end) && ((start + 1) < end)) {
-            length = end - start - 1;
-            if (length < out.size()) {
-                std::copy_n(in.data() + start + 1, length, out.begin());
-                out[length] = '\0';
-            } else {
-                length = 0U;
-            }
-        }
-        return length + 2;
     }
 };
 

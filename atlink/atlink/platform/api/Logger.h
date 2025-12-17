@@ -122,10 +122,10 @@ class Logger {
             return *this;
         }
 
-        Line &operator<<(const ATL_NS::Core::AEnum &e) {
+        Line &operator<<(const ATL_NS::Core::AField &f) {
             if (enabled) {
                 Core::MutableBuffer rem{buf.data() + len, SIZE - len};
-                const auto n = e.stringify(rem);
+                const auto n = f.stringify(rem);
                 if (n < rem.size()) {
                     len += n;
                 }

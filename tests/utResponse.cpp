@@ -29,14 +29,14 @@ class TestResponse : public ATL_NS::Core::Response {
     enum class StrEnum { Five, Six, Seven, Eight, Nine };
 
     int num;
-    ATL_NS::Core::QuotedField<32U> str{};
+    ATL_NS::Core::QuotedText<32U> str{};
     ATL_NS::Core::Enum<IntEnum> intEnum{};
     ATL_NS::Core::Enum<StrEnum> strEnum{};
 
     TestResponse() : ATL_NS::Core::Response("+TEST:") {}
 
     bool accept(ATL_NS::Core::AResponseVisitor &visitor) {
-        return Response::acceptImpl(visitor, num, str.storage(), intEnum, strEnum);
+        return Response::acceptImpl(visitor, num, str, intEnum, strEnum);
     }
 };
 

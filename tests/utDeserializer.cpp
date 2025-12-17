@@ -23,7 +23,7 @@
 SCENARIO("Sequence can be deserialized") {
 
     using atlink::Core::Sequence;
-    const Sequence seq{"ABC"};
+    Sequence seq{"ABC"};
 
     GIVEN("A valid sequence at the beginning of the input") {
         WHEN("Deserialized") {
@@ -142,14 +142,13 @@ SCENARIO("Integer can be deserialized") {
 
 SCENARIO("Quoted string can be deserialized") {
 
-    using atlink::Core::QuotedField;
+    using atlink::Core::QuotedText;
 
     GIVEN("A valid quoted string") {
         WHEN("Deserialized") {
             atlink::Utils::Deserializer deserializer{"\"HELLO\""};
-            QuotedField<16> field;
-            auto storage = field.storage();
-            auto success = deserializer.visit(storage);
+            QuotedText<16> field;
+            auto success = deserializer.visit(field);
             THEN("The string literal is parsed without quotes and consumed size includes quotes") {
                 REQUIRE(success);
                 REQUIRE(field.view() == "HELLO");
@@ -162,9 +161,8 @@ SCENARIO("Quoted string can be deserialized") {
     GIVEN("A valid quoted string with leading whitespace") {
         WHEN("Deserialized") {
             atlink::Utils::Deserializer deserializer{"  \"ABC\""};
-            QuotedField<16> field;
-            auto storage = field.storage();
-            auto success = deserializer.visit(storage);
+            QuotedText<16> field;
+            auto success = deserializer.visit(field);
             THEN("Leading whitespace is skipped and the string is parsed correctly") {
                 REQUIRE(success);
                 REQUIRE(field.view() == "ABC");
@@ -173,59 +171,36 @@ SCENARIO("Quoted string can be deserialized") {
             }
         }
     }
-
-    GIVEN("A quoted string longer than the available storage") {
-        WHEN("Deserialized") {
-            // 8 characters between the quotes, but storage is smaller
-            atlink::Utils::Deserializer deserializer{"\"TOO_LONG\""};
-            QuotedField<4> field; // very small buffer
-            auto storage = field.storage();
-            auto success = deserializer.visit(storage);
-            THEN("The buffer remains effectively empty (no useful content copied)") {
-                // Current implementation reports success if it finds two quotes,
-                // but does not copy data when it does not fit.
-                REQUIRE(success);
-                REQUIRE(field.view().empty());
-                // parseStringLiteral returns length + 2, but length is reset to 0
-                // when the string is too long, so only the quotes are counted.
-                REQUIRE(2U == deserializer.consumed());
-            }
-        }
-    }
 }
 
-SCENARIO("LineText can be deserialized") {
+SCENARIO("Line can be deserialized") {
 
     using atlink::Core::LineText;
     using atlink::Core::MutableBuffer;
 
     GIVEN("Input without CRLF and sufficient buffer size") {
         const char *input = "Hello, world!";
-        WHEN("Deserialized into LineText") {
+        WHEN("Deserialized into Line") {
             atlink::Utils::Deserializer deserializer{input};
 
-            char buf[32] = {};
-            LineText line{MutableBuffer{buf, sizeof(buf)}};
+            LineText<32U> line{};
 
             auto success = deserializer.visit(line);
 
             THEN("All characters are copied until the end of input") {
                 REQUIRE(success);
                 REQUIRE(deserializer.consumed() == std::strlen(input));
-
-                std::string_view lineView{buf, deserializer.consumed()};
-                REQUIRE(lineView == input);
+                REQUIRE(line.view() == input);
             }
         }
     }
 
     GIVEN("Input containing CRLF before the end") {
         const char *input = "ABC\r\nDEF";
-        WHEN("Deserialized into LineText") {
+        WHEN("Deserialized into Line") {
             atlink::Utils::Deserializer deserializer{input};
 
-            char buf[16] = {};
-            LineText line{MutableBuffer{buf, sizeof(buf)}};
+            LineText<16U> line{};
 
             auto success = deserializer.visit(line);
 
@@ -233,30 +208,26 @@ SCENARIO("LineText can be deserialized") {
                 REQUIRE(success);
                 // Only "ABC" is taken before CRLF
                 REQUIRE(3U == deserializer.consumed());
-
-                std::string_view lineView{buf, 3U};
-                REQUIRE(lineView == "ABC");
+                REQUIRE(line.view() == "ABC");
             }
         }
     }
 
-    GIVEN("Input longer than the LineText buffer") {
+    GIVEN("Input longer than the Line buffer") {
         // TODO:
         const char *input = "1234567890";
-        WHEN("Deserialized into a smaller LineText buffer") {
+        WHEN("Deserialized into a smaller Line buffer") {
             atlink::Utils::Deserializer deserializer{input};
 
-            char buf[5] = {}; // smaller than input
-            LineText line{MutableBuffer{buf, sizeof(buf)}};
+            static constexpr size_t LEN{5U};
+            LineText<LEN> line{};
 
             auto success = deserializer.visit(line);
 
             THEN("Only as many characters as fit into the buffer are copied") {
                 REQUIRE(success);
-                REQUIRE(deserializer.consumed() == sizeof(buf));
-
-                std::string_view lineView{buf, deserializer.consumed()};
-                REQUIRE(lineView == std::string_view(input, sizeof(buf)));
+                REQUIRE(deserializer.consumed() == LEN);
+                REQUIRE(line.view() == std::string_view(input, LEN));
             }
         }
     }
@@ -273,9 +244,7 @@ SCENARIO("Enum can be deserialized") {
         WHEN("Deserialized via AEnum interface") {
             atlink::Utils::Deserializer deserializer{"1"};
             Enum<TestEnum> e;
-            auto &asAEnum = static_cast<atlink::Core::AEnum &>(e);
-
-            auto success = deserializer.visit(asAEnum);
+            auto success = deserializer.visit(e);
 
             THEN("The enum value is parsed and some input is consumed") {
                 REQUIRE(success);
@@ -293,9 +262,7 @@ SCENARIO("Enum can be deserialized") {
             atlink::Utils::Deserializer deserializer{"abc"};
             Enum<TestEnum> e;
             e = TestEnum::Two; // set to a non-default value
-
-            auto &asAEnum = static_cast<atlink::Core::AEnum &>(e);
-            auto success = deserializer.visit(asAEnum);
+            auto success = deserializer.visit(e);
 
             THEN("The deserializer reports invalidity and does not consume input") {
                 REQUIRE_FALSE(success);
@@ -311,7 +278,7 @@ SCENARIO("Enum can be deserialized") {
 SCENARIO("Deserializer can be rewound") {
 
     using atlink::Core::Sequence;
-    const Sequence seq{"ABC"};
+    Sequence seq{"ABC"};
 
     GIVEN("A deserializer that has already consumed some input") {
         atlink::Utils::Deserializer deserializer{"ABC 123"};

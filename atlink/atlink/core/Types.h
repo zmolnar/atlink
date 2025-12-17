@@ -27,17 +27,20 @@ namespace Core {
 using ReadOnlyText = std::string_view;
 using MutableBuffer = gsl::span<char>;
 
-struct LineText {
-    MutableBuffer buf;
+class AField {
+  public:
+    virtual size_t stringify(MutableBuffer output) const = 0;
+    virtual size_t parse(ReadOnlyText input) = 0;
+    virtual ~AField() = default;
 };
 
-class Sequence {
+class Sequence : public AField {
     const ReadOnlyText seq;
 
   public:
     explicit constexpr Sequence(ReadOnlyText seq) : seq{seq} {}
 
-    size_t stringify(MutableBuffer output) const {
+    size_t stringify(MutableBuffer output) const override {
         size_t n = 0U;
         if (seq.size() < output.size()) {
             std::copy_n(seq.data(), seq.size(), output.data());
@@ -46,7 +49,7 @@ class Sequence {
         return n;
     }
 
-    size_t parse(ReadOnlyText input) const {
+    size_t parse(ReadOnlyText input) override {
         auto start = input.find(seq);
         size_t n = 0U;
         if (0U == start) {
@@ -55,14 +58,18 @@ class Sequence {
         return n;
     }
 
+    ReadOnlyText view() const {
+        return seq;
+    }
+
     size_t length() const {
         return seq.size();
     }
 };
 
-class FixedBufStream {
+class TextBuilder {
   public:
-    FixedBufStream(char *data, std::size_t size) : buf{data}, cap{size}, len{0} {}
+    TextBuilder(MutableBuffer buf, size_t &len) : buf{buf.data()}, cap{buf.size()}, len{len} {}
 
     std::size_t size() const {
         return len;
@@ -77,7 +84,7 @@ class FixedBufStream {
         len = 0;
     }
 
-    FixedBufStream &operator<<(const char *s) {
+    TextBuilder &operator<<(const char *s) {
         if (!s)
             return *this;
         while (*s && len < cap - 1) {
@@ -87,7 +94,7 @@ class FixedBufStream {
         return *this;
     }
 
-    FixedBufStream &operator<<(char c) {
+    TextBuilder &operator<<(char c) {
         if (len < cap - 1) {
             buf[len++] = c;
             buf[len] = '\0';
@@ -95,12 +102,12 @@ class FixedBufStream {
         return *this;
     }
 
-    FixedBufStream &operator<<(bool v) {
+    TextBuilder &operator<<(bool v) {
         return (*this) << (v ? "true" : "false");
     }
 
     template <class T, typename std::enable_if<std::is_integral<T>::value, int>::type = 0>
-    FixedBufStream &operator<<(T v) {
+    TextBuilder &operator<<(T v) {
         if (len >= cap - 1)
             return *this;
 
@@ -117,43 +124,136 @@ class FixedBufStream {
   private:
     char *buf;
     std::size_t cap;
-    std::size_t len;
+    std::size_t &len;
 };
 
-using QuotedStringView = ReadOnlyText;
-using QuotedStringStorage = MutableBuffer;
+template <std::size_t N>
+class LineText : public AField {
+    std::array<char, N> chars{};
+    size_t length{0U};
+    TextBuilder textBuilder{chars, length};
+
+  public:
+    TextBuilder &builder() {
+        return textBuilder;
+    }
+
+    size_t stringify(MutableBuffer output) const override {
+        const std::size_t n = std::min<std::size_t>(length, output.size());
+        std::copy_n(chars.data(), n, output.data());
+        return n;
+    }
+
+    size_t parse(ReadOnlyText input) override {
+        // TODO: fix it!!!
+        auto pos = input.find("\r\n");
+        std::size_t take = 0U;
+        if (pos == std::string_view::npos) {
+            take = std::min<std::size_t>(input.size(), chars.size());
+        } else {
+            take = std::min<std::size_t>(pos, chars.size());
+        }
+
+        std::copy_n(input.data(), take, chars.data());
+        chars[take] = '\0';
+        length = take;
+        return length;
+    }
+
+    ReadOnlyText view() const {
+        return ReadOnlyText{chars.data(), length};
+    }
+};
 
 template <std::size_t N>
-class QuotedField {
-  public:
-    QuotedField() : fb{chars.data(), chars.size()} {
-        clear();
-    }
-
-    QuotedStringStorage storage() {
-        return chars;
-    }
-
-    QuotedStringView view() const {
-        return data();
-    }
-
-    FixedBufStream &stream() {
-        return fb;
-    }
-
-    void clear() {
-        fb.clear();
-    }
-
-    std::string_view data() const {
-        auto len = strnlen(chars.data(), chars.size());
-        return std::string_view{chars.data(), len};
-    }
-
-  private:
+class QuotedText : public AField {
     std::array<char, N> chars{};
-    FixedBufStream fb;
+    size_t length{0U};
+    TextBuilder textBuilder{chars, length};
+
+  public:
+    TextBuilder &builder() {
+        return textBuilder;
+    }
+
+    size_t stringify(MutableBuffer output) const override {
+        std::size_t extra = 0U;
+        for (char c : chars)
+            extra += (('\"' == c) ? 1 : 0);
+
+        size_t n = 0;
+        const std::size_t need = 2U + length + extra;
+        if (need < output.size()) {
+            output[n++] = '\"';
+            for (auto i = 0U; i < length; ++i) {
+                auto c = chars[i];
+                if (c == '\"') {
+                    output[n++] = '\\';
+                }
+                output[n++] = c;
+            }
+            output[n++] = '\"';
+            output[n] = '\0';
+        }
+        return n;
+    }
+
+    size_t parse(ReadOnlyText input) override {
+        length = 0U;
+
+        if (input.empty() || input[0] != '\"') {
+            return 0U;
+        }
+
+        std::size_t in = 1U;  // index in input, skip opening quote
+        std::size_t out = 0U; // index in chars
+
+        while (in < input.size()) {
+            const char c = input[in];
+
+            // Closing quote → done
+            if (c == '\"') {
+                if (!chars.empty()) {
+                    chars[std::min(out, chars.size() - 1)] = '\0';
+                }
+                length = out;
+                return in + 1U; // total consumed, incl. closing quote
+            }
+
+            // Handle escaped quote \" → "
+            if (c == '\\') {
+                if (in + 1U < input.size() && input[in + 1U] == '\"') {
+                    if (out + 1U >= chars.size()) {
+                        return 0U; // no space (reserve for '\0')
+                    }
+                    chars[out++] = '\"';
+                    in += 2U;
+                    continue;
+                }
+                // Any other backslash: copy as-is
+                if (out + 1U >= chars.size()) {
+                    return 0U;
+                }
+                chars[out++] = '\\';
+                ++in;
+                continue;
+            }
+
+            // Normal character
+            if (out + 1U >= chars.size()) {
+                return 0U;
+            }
+            chars[out++] = c;
+            ++in;
+        }
+
+        // Unterminated quoted string
+        return 0U;
+    }
+
+    ReadOnlyText view() const {
+        return ReadOnlyText{chars.data(), length};
+    }
 };
 
 } // namespace Core

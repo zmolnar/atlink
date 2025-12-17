@@ -93,9 +93,7 @@ SCENARIO("Unknown URC is captured by AnyUrc as fallback") {
 
                 const AnyUrc *urc = dispatcher.pack.template getIf<AnyUrc>();
                 REQUIRE(urc != nullptr);
-                const char *payloadCStr = urc->storage.data();
-                REQUIRE(std::string_view{payloadCStr}.find("+BAR: some payload") !=
-                        std::string_view::npos);
+                REQUIRE(urc->payload.view().find("+BAR: some payload") != std::string_view::npos);
             }
         }
     }
@@ -122,9 +120,7 @@ SCENARIO("Malformed known URC falls back to AnyUrc") {
 
                 const AnyUrc *urc = dispatcher.pack.template getIf<AnyUrc>();
                 REQUIRE(urc != nullptr);
-                const char *payloadCStr = urc->storage.data();
-                REQUIRE(std::string_view{payloadCStr}.find("+FOO: not_an_int") !=
-                        std::string_view::npos);
+                REQUIRE(urc->payload.view().find("+FOO: not_an_int") != std::string_view::npos);
             }
         }
     }
@@ -180,9 +176,7 @@ SCENARIO("Dispatcher can be reused for multiple URCs") {
                     REQUIRE(dispatcher.pack.template holds<AnyUrc>());
                     const AnyUrc *any = dispatcher.pack.template getIf<AnyUrc>();
                     REQUIRE(any != nullptr);
-                    const char *payloadCStr = any->storage.data();
-                    REQUIRE(std::string_view{payloadCStr}.find("+XYZ: something") !=
-                            std::string_view::npos);
+                    REQUIRE(any->payload.view().find("+XYZ: something") != std::string_view::npos);
                 }
             }
         }

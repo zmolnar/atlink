@@ -26,9 +26,7 @@ namespace Core {
 
 class ACommandVisitor {
   public:
-    virtual bool visit(const Sequence &) = 0;
-    virtual bool visit(const QuotedStringView) = 0;
-    virtual bool visit(const AEnum &) = 0;
+    virtual bool visit(const AField &) = 0;
     virtual bool visit(int) = 0;
     virtual size_t written() const = 0;
     virtual ~ACommandVisitor() = default;
@@ -36,10 +34,7 @@ class ACommandVisitor {
 
 class AResponseVisitor {
   public:
-    virtual bool visit(const Sequence &) = 0;
-    virtual bool visit(QuotedStringStorage) = 0;
-    virtual bool visit(LineText &) = 0;
-    virtual bool visit(AEnum &) = 0;
+    virtual bool visit(AField &) = 0;
     virtual bool visit(int &) = 0;
     virtual void rewind() = 0;
     virtual size_t consumed() const = 0;
@@ -66,7 +61,7 @@ class APacket {
     }
 
     template <typename... Args>
-    bool acceptWithTerm(AResponseVisitor &visitor, const Sequence &term, Args &&...args) {
+    bool acceptWithTerm(AResponseVisitor &visitor, Sequence &term, Args &&...args) {
         if (tag.length() > 0U) {
             if (!visitor.visit(tag))
                 return false;
@@ -79,7 +74,7 @@ class APacket {
     }
 
     template <typename... Args>
-    bool acceptWithTerm(ACommandVisitor &visitor, const Sequence &term, Args &&...args) const {
+    bool acceptWithTerm(ACommandVisitor &visitor, Sequence &term, Args &&...args) const {
         if (tag.length() > 0U) {
             if (!visitor.visit(tag))
                 return false;

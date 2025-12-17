@@ -26,18 +26,18 @@ namespace {
 
 using ATL_NS::Core::APacket;
 using ATL_NS::Core::AResponseVisitor;
-using ATL_NS::Core::QuotedField;
+using ATL_NS::Core::QuotedText;
 using ATL_NS::Core::Response;
 
 class FooResponse : public Response {
   public:
     int num{0};
-    QuotedField<32U> str{};
+    QuotedText<32U> str{};
 
     FooResponse() : Response("+FOO:") {}
 
     bool accept(AResponseVisitor &v) override {
-        return Response::acceptImpl(v, num, str.storage());
+        return Response::acceptImpl(v, num, str);
     }
 };
 
@@ -73,10 +73,10 @@ class DupIntOnly : public Response {
 class DupIntStr : public Response {
   public:
     int n{0};
-    QuotedField<32U> s{};
+    QuotedText<32U> s{};
     DupIntStr() : Response("+DUP:") {}
     bool accept(AResponseVisitor &v) override {
-        return Response::acceptImpl(v, n, s.storage());
+        return Response::acceptImpl(v, n, s);
     }
 };
 

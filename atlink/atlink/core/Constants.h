@@ -29,9 +29,9 @@ inline static constexpr Core::ReadOnlyText Cr{"\r"};
 inline static constexpr Core::ReadOnlyText Comma{","};
 } // namespace Literals
 
-inline static constexpr Core::Sequence Cr{Literals::Cr};
-inline static constexpr Core::Sequence CrLf{Literals::CrLf};
-inline static constexpr Core::Sequence Comma{Literals::Comma};
+inline static Core::Sequence Cr{Literals::Cr};
+inline static Core::Sequence CrLf{Literals::CrLf};
+inline static Core::Sequence Comma{Literals::Comma};
 
 } // namespace Constants
 } // namespace Core

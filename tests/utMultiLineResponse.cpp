@@ -26,8 +26,7 @@ class TestResponse : public ATL_NS::Core::MultiLineResponse {
   public:
     class Line : public ATL_NS::Core::Line {
       public:
-        std::array<char, 32U> storage{};
-        ATL_NS::Core::LineText content{storage};
+        ATL_NS::Core::LineText<32U> content;
 
         bool accept(ATL_NS::Core::AResponseVisitor &visitor) override {
             return ATL_NS::Core::Line::acceptImpl(visitor, content);
@@ -57,15 +56,9 @@ SCENARIO("Multi-line response is processed") {
             auto success = res.accept(deserializer);
             THEN("All lines are fetched properly") {
                 REQUIRE(success);
-
-                auto line1 = std::string_view{res.line1.content.buf.data()};
-                REQUIRE(std::string_view{"line one"} == line1);
-
-                auto line2 = std::string_view{res.line2.content.buf.data()};
-                REQUIRE(std::string_view{"line two"} == line2);
-
-                auto line3 = std::string_view{res.line3.content.buf.data()};
-                REQUIRE(std::string_view{"line three"} == line3);
+                REQUIRE(std::string_view{"line one"} == res.line1.content.view());
+                REQUIRE(std::string_view{"line two"} == res.line2.content.view());
+                REQUIRE(std::string_view{"line three"} == res.line3.content.view());
             }
         }
 
@@ -75,15 +68,9 @@ SCENARIO("Multi-line response is processed") {
             auto success = res.accept(deserializer);
             THEN("The optional leading CRLF is tolerated and lines are still parsed") {
                 REQUIRE(success);
-
-                auto line1 = std::string_view{res.line1.content.buf.data()};
-                REQUIRE(std::string_view{"line one"} == line1);
-
-                auto line2 = std::string_view{res.line2.content.buf.data()};
-                REQUIRE(std::string_view{"line two"} == line2);
-
-                auto line3 = std::string_view{res.line3.content.buf.data()};
-                REQUIRE(std::string_view{"line three"} == line3);
+                REQUIRE(std::string_view{"line one"} == res.line1.content.view());
+                REQUIRE(std::string_view{"line two"} == res.line2.content.view());
+                REQUIRE(std::string_view{"line three"} == res.line3.content.view());
             }
         }
 

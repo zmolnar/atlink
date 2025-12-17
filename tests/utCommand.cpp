@@ -30,13 +30,13 @@ class TestCommand : public ATL_NS::Core::Command {
     enum class StrEnum { Five, Six, Seven, Eight, Nine };
 
     int num{123456};
-    ATL_NS::Core::QuotedField<32U> str{};
+    ATL_NS::Core::QuotedText<32U> str{};
     ATL_NS::Core::Enum<IntEnum> intEnum{};
     ATL_NS::Core::Enum<StrEnum> strEnum{};
 
     TestCommand() : ATL_NS::Core::Command("+TEST CMD:") {}
     bool accept(ATL_NS::Core::ACommandVisitor &visitor) const override {
-        return APacket::accept(visitor, num, str.view(), intEnum, strEnum);
+        return APacket::accept(visitor, num, str, intEnum, strEnum);
     }
 };
 
@@ -59,7 +59,7 @@ SCENARIO("Command can accept visitor") {
 
     GIVEN("A command") {
         auto cmd = TestCommand{};
-        cmd.str.stream() << "test \"string\"";
+        cmd.str.builder() << "test \"string\"";
         cmd.intEnum = TestCommand::IntEnum::Two;
         cmd.strEnum = TestCommand::StrEnum::Seven;
         WHEN("Serialized") {

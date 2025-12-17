@@ -79,15 +79,8 @@ struct EnumTraits<T, std::enable_if_t<!has_map<T>::value>> {
     }
 };
 
-class AEnum {
-  public:
-    virtual size_t stringify(MutableBuffer output) const = 0;
-    virtual size_t parse(ReadOnlyText input) = 0;
-    virtual ~AEnum() = default;
-};
-
 template <typename T>
-class Enum : public AEnum {
+class Enum : public AField {
   private:
     T value{};
 

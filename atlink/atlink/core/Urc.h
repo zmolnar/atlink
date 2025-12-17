@@ -26,8 +26,7 @@ namespace Core {
 
 class AnyUrc : public Response {
   public:
-    std::array<char, 512U> storage{};
-    LineText payload{storage};
+    LineText<512U> payload{};
 
     AnyUrc() : Response("") {}
 

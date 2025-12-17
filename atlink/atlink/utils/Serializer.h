@@ -34,20 +34,8 @@ class Serializer : public Core::ACommandVisitor {
         memset(rest.data(), 0U, rest.size());
     }
 
-    bool visit(const Core::Sequence &s) override {
-        auto n = s.stringify(rest);
-        rest = rest.subspan(n);
-        return (0U < n);
-    }
-
-    bool visit(const Core::QuotedStringView s) override {
-        auto n = writeQuoted(rest, s);
-        rest = rest.subspan(n);
-        return (0U < n);
-    }
-
-    bool visit(const Core::AEnum &e) override {
-        auto n = e.stringify(rest);
+    bool visit(const Core::AField &field) override {
+        auto n = field.stringify(rest);
         rest = rest.subspan(n);
         return (0U < n);
     }
@@ -70,28 +58,6 @@ class Serializer : public Core::ACommandVisitor {
 
     Core::ReadOnlyText output() const {
         return Core::ReadOnlyText{buf.data(), written()};
-    }
-
-  private:
-    size_t writeQuoted(Core::MutableBuffer out, Core::ReadOnlyText txt) {
-        std::size_t extra = 0U;
-        for (char c : txt)
-            extra += (('\"' == c) ? 1 : 0);
-
-        size_t n = 0;
-        const std::size_t need = 2U + txt.size() + extra;
-        if (need < out.size()) {
-            out[n++] = '\"';
-            for (char c : txt) {
-                if (c == '\"') {
-                    out[n++] = '\\';
-                }
-                out[n++] = c;
-            }
-            out[n++] = '\"';
-        }
-
-        return n;
     }
 };
 
