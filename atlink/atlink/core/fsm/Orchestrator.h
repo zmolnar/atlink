@@ -64,7 +64,7 @@ class Orchestrator : public Context, public Platform::Api::Subscriber {
         o->events.put(Fsm::Event::TxReady);
     }
 
-    explicit Orchestrator(Platform::DeviceIO &io, AUrcDispatcher &udp)
+    Orchestrator(Platform::DeviceIO &io, AUrcDispatcher &udp)
         : deviceIO{io}, urcDispatcher{udp} {
         deviceIO.subscribe(*this);
         coolDown.setHandler(timerCallback, this);
@@ -85,8 +85,8 @@ class Orchestrator : public Context, public Platform::Api::Subscriber {
 
     void handle(Fsm::Event event) {
         auto handlers = Utils::Overload{
-            [&](State::Idle &idle) -> State::Variant {
-                return idle.handle(event);
+            [&](State::Idle &i) -> State::Variant {
+                return i.handle(event);
             },
             [&](State::SendCommand &s) -> State::Variant {
                 return s.handle(event);
