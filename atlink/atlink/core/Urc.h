@@ -19,8 +19,6 @@
 
 #include "atlink/core/ResponsePack.h"
 
-#include <array>
-
 namespace ATL_NS {
 namespace Core {
 

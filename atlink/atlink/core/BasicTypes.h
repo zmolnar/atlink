@@ -17,22 +17,14 @@
 
 #pragma once
 
-#include "atlink/core/Types.h"
+#include <gsl/span>
+#include <string_view>
 
 namespace ATL_NS {
 namespace Core {
-namespace Constants {
 
-namespace Literals {
-inline static constexpr Core::ReadOnlyText CrLf{"\r\n"};
-inline static constexpr Core::ReadOnlyText Cr{"\r"};
-inline static constexpr Core::ReadOnlyText Comma{","};
-} // namespace Literals
+using ReadOnlyText = std::string_view;
+using MutableBuffer = gsl::span<char>;
 
-inline static Core::Sequence Cr{Literals::Cr};
-inline static Core::Sequence CrLf{Literals::CrLf};
-inline static Core::Sequence Comma{Literals::Comma};
-
-} // namespace Constants
 } // namespace Core
 } // namespace ATL_NS

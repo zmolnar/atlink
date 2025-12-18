@@ -38,10 +38,8 @@ class Response : public Core::MultiLineResponse {
   public:
     class Manufacturer : Core::Line {
       public:
-        std::array<char, 32U> storage{};
-        Core::LineText name{storage};
+        Core::LineText<32U> name{};
 
-        Manufacturer() : Core::Line() {}
         bool accept(Core::AResponseVisitor &visitor) override {
             return Core::Line::acceptImpl(visitor, name);
         }

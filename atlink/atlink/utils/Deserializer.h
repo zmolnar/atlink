@@ -17,7 +17,6 @@
 
 #pragma once
 
-#include "atlink/core/Constants.h"
 #include "atlink/core/Packet.h"
 
 #include <charconv>
@@ -38,7 +37,7 @@ class Deserializer : public Core::AResponseVisitor {
         length = 0U;
     }
 
-    bool visit(Core::AField &field) override {
+    bool visit(Core::AElement &field) override {
         skipWhitespaces();
         auto n = field.parse(input.substr(length));
         length += n;

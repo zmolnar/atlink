@@ -24,7 +24,8 @@
 #include <magic_enum/magic_enum.hpp>
 #include <optional>
 
-#include "atlink/core/Types.h"
+#include "atlink/core/BasicTypes.h"
+#include "atlink/core/Elements.h"
 
 namespace ATL_NS {
 namespace Utils {

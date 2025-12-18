@@ -17,16 +17,16 @@
 
 #pragma once
 
-#include "atlink/core/Constants.h"
+#include "atlink/core/BasicTypes.h"
+#include "atlink/core/Elements.h"
 #include "atlink/core/Enum.h"
-#include "atlink/core/Types.h"
 
 namespace ATL_NS {
 namespace Core {
 
 class ACommandVisitor {
   public:
-    virtual bool visit(const AField &) = 0;
+    virtual bool visit(const AElement &) = 0;
     virtual bool visit(int) = 0;
     virtual size_t written() const = 0;
     virtual ~ACommandVisitor() = default;
@@ -34,7 +34,7 @@ class ACommandVisitor {
 
 class AResponseVisitor {
   public:
-    virtual bool visit(AField &) = 0;
+    virtual bool visit(AElement &) = 0;
     virtual bool visit(int &) = 0;
     virtual void rewind() = 0;
     virtual size_t consumed() const = 0;

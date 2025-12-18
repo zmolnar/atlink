@@ -34,7 +34,7 @@ class Serializer : public Core::ACommandVisitor {
         memset(rest.data(), 0U, rest.size());
     }
 
-    bool visit(const Core::AField &field) override {
+    bool visit(const Core::AElement &field) override {
         auto n = field.stringify(rest);
         rest = rest.subspan(n);
         return (0U < n);

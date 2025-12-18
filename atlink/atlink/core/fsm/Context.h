@@ -17,7 +17,8 @@
 
 #pragma once
 
-#include "atlink/core/Types.h"
+#include "atlink/core/BasicTypes.h"
+#include "atlink/core/Elements.h"
 
 namespace ATL_NS {
 namespace Core {
