@@ -26,18 +26,18 @@ namespace {
 
 using ATL_NS::Core::APacket;
 using ATL_NS::Core::AResponseVisitor;
-using ATL_NS::Core::QuotedText;
+using ATL_NS::Core::QuotedString;
 using ATL_NS::Core::Response;
 
 class FooResponse : public Response {
   public:
     int num{0};
-    QuotedText<32U> str{};
+    QuotedString<32U> quotedString{};
 
     FooResponse() : Response("+FOO:") {}
 
     bool accept(AResponseVisitor &v) override {
-        return Response::acceptImpl(v, num, str);
+        return Response::acceptImpl(v, num, quotedString);
     }
 };
 
@@ -73,10 +73,10 @@ class DupIntOnly : public Response {
 class DupIntStr : public Response {
   public:
     int n{0};
-    QuotedText<32U> s{};
+    QuotedString<32U> quotedString{};
     DupIntStr() : Response("+DUP:") {}
     bool accept(AResponseVisitor &v) override {
-        return Response::acceptImpl(v, n, s);
+        return Response::acceptImpl(v, n, quotedString);
     }
 };
 
@@ -97,7 +97,7 @@ SCENARIO("ResponsePack parses the first matching response type") {
                 auto *foo = pack.getIf<FooResponse>();
                 REQUIRE(foo != nullptr);
                 REQUIRE(foo->num == 7);
-                REQUIRE(std::string_view{"hello"} == foo->str.view());
+                REQUIRE(std::string_view{"hello"} == foo->quotedString.view());
                 // +FOO: 7, "hello"\r\n  -> sanity check consumed bytes
                 REQUIRE(d.consumed() > 0);
             }
@@ -158,7 +158,7 @@ SCENARIO("ResponsePack parses the first matching response type") {
                 auto *foo = pack.getIf<FooResponse>();
                 REQUIRE(foo != nullptr);
                 REQUIRE(foo->num == 1);
-                REQUIRE(std::string_view{"x"} == foo->str.view());
+                REQUIRE(std::string_view{"x"} == foo->quotedString.view());
             }
         }
     }
@@ -193,7 +193,7 @@ SCENARIO("ResponsePack respects ordering with duplicate tags") {
                 auto *r = pack.getIf<DupIntStr>();
                 REQUIRE(r != nullptr);
                 REQUIRE(r->n == 5);
-                REQUIRE(std::string_view{"five"} == r->s.view());
+                REQUIRE(std::string_view{"five"} == r->quotedString.view());
             }
         }
     }

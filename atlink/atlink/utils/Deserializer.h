@@ -37,7 +37,7 @@ class Deserializer : public Core::AResponseVisitor {
         length = 0U;
     }
 
-    bool visit(Core::AElement &field) override {
+    bool visit(Core::AField &field) override {
         skipWhitespaces();
         auto n = field.parse(input.substr(length));
         length += n;

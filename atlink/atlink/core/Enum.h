@@ -23,7 +23,7 @@
 #include <type_traits>
 
 #include "atlink/core/BasicTypes.h"
-#include "atlink/core/Elements.h"
+#include "atlink/core/Fields.h"
 #include "atlink/utils/EnumStringConverter.h"
 
 namespace ATL_NS {
@@ -81,7 +81,7 @@ struct EnumTraits<T, std::enable_if_t<!has_map<T>::value>> {
 };
 
 template <typename T>
-class Enum : public AElement {
+class Enum : public AField {
   private:
     T value{};
 

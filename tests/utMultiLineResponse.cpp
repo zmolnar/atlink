@@ -26,10 +26,10 @@ class TestResponse : public ATL_NS::Core::MultiLineResponse {
   public:
     class Line : public ATL_NS::Core::Line {
       public:
-        ATL_NS::Core::LineText<32U> content;
+        ATL_NS::Core::LineString<32U> lineString;
 
         bool accept(ATL_NS::Core::AResponseVisitor &visitor) override {
-            return ATL_NS::Core::Line::acceptImpl(visitor, content);
+            return ATL_NS::Core::Line::acceptImpl(visitor, lineString);
         }
     };
 
@@ -56,9 +56,9 @@ SCENARIO("Multi-line response is processed") {
             auto success = res.accept(deserializer);
             THEN("All lines are fetched properly") {
                 REQUIRE(success);
-                REQUIRE(std::string_view{"line one"} == res.line1.content.view());
-                REQUIRE(std::string_view{"line two"} == res.line2.content.view());
-                REQUIRE(std::string_view{"line three"} == res.line3.content.view());
+                REQUIRE(std::string_view{"line one"} == res.line1.lineString.view());
+                REQUIRE(std::string_view{"line two"} == res.line2.lineString.view());
+                REQUIRE(std::string_view{"line three"} == res.line3.lineString.view());
             }
         }
 
@@ -68,9 +68,9 @@ SCENARIO("Multi-line response is processed") {
             auto success = res.accept(deserializer);
             THEN("The optional leading CRLF is tolerated and lines are still parsed") {
                 REQUIRE(success);
-                REQUIRE(std::string_view{"line one"} == res.line1.content.view());
-                REQUIRE(std::string_view{"line two"} == res.line2.content.view());
-                REQUIRE(std::string_view{"line three"} == res.line3.content.view());
+                REQUIRE(std::string_view{"line one"} == res.line1.lineString.view());
+                REQUIRE(std::string_view{"line two"} == res.line2.lineString.view());
+                REQUIRE(std::string_view{"line three"} == res.line3.lineString.view());
             }
         }
 

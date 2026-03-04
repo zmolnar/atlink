@@ -18,15 +18,15 @@
 #pragma once
 
 #include "atlink/core/BasicTypes.h"
-#include "atlink/core/Elements.h"
 #include "atlink/core/Enum.h"
+#include "atlink/core/Fields.h"
 
 namespace ATL_NS {
 namespace Core {
 
 class ACommandVisitor {
   public:
-    virtual bool visit(const AElement &) = 0;
+    virtual bool visit(const AField &) = 0;
     virtual bool visit(int) = 0;
     virtual size_t written() const = 0;
     virtual ~ACommandVisitor() = default;
@@ -34,7 +34,7 @@ class ACommandVisitor {
 
 class AResponseVisitor {
   public:
-    virtual bool visit(AElement &) = 0;
+    virtual bool visit(AField &) = 0;
     virtual bool visit(int &) = 0;
     virtual void rewind() = 0;
     virtual size_t consumed() const = 0;
@@ -43,7 +43,7 @@ class AResponseVisitor {
 
 class APacket {
   public:
-    Sequence tag;
+    Literal tag;
 
     APacket() : tag{""} {}
     explicit APacket(ReadOnlyText tag) : tag{tag} {}
@@ -61,7 +61,7 @@ class APacket {
     }
 
     template <typename... Args>
-    bool acceptWithTerm(AResponseVisitor &visitor, Sequence &term, Args &&...args) {
+    bool acceptWithTerm(AResponseVisitor &visitor, Literal &term, Args &&...args) {
         if (tag.length() > 0U) {
             if (!visitor.visit(tag))
                 return false;
@@ -74,7 +74,7 @@ class APacket {
     }
 
     template <typename... Args>
-    bool acceptWithTerm(ACommandVisitor &visitor, Sequence &term, Args &&...args) const {
+    bool acceptWithTerm(ACommandVisitor &visitor, const Literal &term, Args &&...args) const {
         if (tag.length() > 0U) {
             if (!visitor.visit(tag))
                 return false;

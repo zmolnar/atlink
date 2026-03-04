@@ -20,26 +20,26 @@
 #include <catch2/catch_all.hpp>
 #include <cstring>
 
-SCENARIO("Sequence can be deserialized") {
+SCENARIO("Literal can be deserialized") {
 
-    using atlink::Core::Sequence;
-    Sequence seq{"ABC"};
+    using atlink::Core::Literal;
+    Literal literal{"ABC"};
 
-    GIVEN("A valid sequence at the beginning of the input") {
+    GIVEN("A valid literal at the beginning of the input") {
         WHEN("Deserialized") {
             atlink::Utils::Deserializer deserializer{"ABC"};
-            auto success = deserializer.visit(seq);
-            THEN("The sequence is recognized and the correct number of bytes is reported") {
+            auto success = deserializer.visit(literal);
+            THEN("The literal is recognized and the correct number of bytes is reported") {
                 REQUIRE(success);
                 REQUIRE(3U == deserializer.consumed());
             }
         }
     }
 
-    GIVEN("An invalid sequence") {
+    GIVEN("An invalid literal") {
         WHEN("Deserialized") {
             atlink::Utils::Deserializer deserializer{"ABX"};
-            auto success = deserializer.visit(seq);
+            auto success = deserializer.visit(literal);
             THEN("The deserializer reports invalidity and consumes nothing") {
                 REQUIRE_FALSE(success);
                 REQUIRE(0U == deserializer.consumed());
@@ -47,10 +47,10 @@ SCENARIO("Sequence can be deserialized") {
         }
     }
 
-    GIVEN("A valid sequence with leading whitespaces") {
+    GIVEN("A valid literal with leading whitespaces") {
         WHEN("Deserialized") {
             atlink::Utils::Deserializer deserializer{"  \tABC"};
-            auto success = deserializer.visit(seq);
+            auto success = deserializer.visit(literal);
             THEN("Leading whitespace is skipped and the correct number of bytes is reported") {
                 REQUIRE(success);
                 // 3 characters of whitespace + 3 for "ABC"
@@ -62,8 +62,8 @@ SCENARIO("Sequence can be deserialized") {
     GIVEN("Input containing only whitespaces") {
         WHEN("Deserialized") {
             atlink::Utils::Deserializer deserializer{"   \t   "};
-            auto success = deserializer.visit(seq);
-            THEN("No sequence is matched and all input is considered consumed after skipping") {
+            auto success = deserializer.visit(literal);
+            THEN("No literal is matched and all input is considered consumed after skipping") {
                 REQUIRE_FALSE(success);
                 REQUIRE(7U == deserializer.consumed());
             }
@@ -142,12 +142,12 @@ SCENARIO("Integer can be deserialized") {
 
 SCENARIO("Quoted string can be deserialized") {
 
-    using atlink::Core::QuotedText;
+    using atlink::Core::QuotedString;
 
     GIVEN("A valid quoted string") {
         WHEN("Deserialized") {
             atlink::Utils::Deserializer deserializer{"\"HELLO\""};
-            QuotedText<16> field;
+            QuotedString<16> field;
             auto success = deserializer.visit(field);
             THEN("The string literal is parsed without quotes and consumed size includes quotes") {
                 REQUIRE(success);
@@ -161,7 +161,7 @@ SCENARIO("Quoted string can be deserialized") {
     GIVEN("A valid quoted string with leading whitespace") {
         WHEN("Deserialized") {
             atlink::Utils::Deserializer deserializer{"  \"ABC\""};
-            QuotedText<16> field;
+            QuotedString<16> field;
             auto success = deserializer.visit(field);
             THEN("Leading whitespace is skipped and the string is parsed correctly") {
                 REQUIRE(success);
@@ -171,63 +171,81 @@ SCENARIO("Quoted string can be deserialized") {
             }
         }
     }
+
+    GIVEN("A quoted string longer than the available storage") {
+        WHEN("Deserialized") {
+            // 8 characters between the quotes, but storage is smaller
+            atlink::Utils::Deserializer deserializer{"\"TOO_LONG\""};
+            QuotedString<4> field; // very small buffer
+            auto success = deserializer.visit(field);
+            THEN("The value is rejected and input remains unconsumed") {
+                REQUIRE_FALSE(success);
+                REQUIRE(field.view().empty());
+                REQUIRE(0U == deserializer.consumed());
+            }
+        }
+    }
 }
 
-SCENARIO("Line can be deserialized") {
+SCENARIO("LineString can be deserialized") {
 
-    using atlink::Core::LineText;
-    using atlink::Core::MutableBuffer;
+    using atlink::Core::LineString;
 
     GIVEN("Input without CRLF and sufficient buffer size") {
         const char *input = "Hello, world!";
-        WHEN("Deserialized into Line") {
+        WHEN("Deserialized into LineString") {
             atlink::Utils::Deserializer deserializer{input};
 
-            LineText<32U> line{};
+            LineString<32U> lineString{};
 
-            auto success = deserializer.visit(line);
+            auto success = deserializer.visit(lineString);
 
             THEN("All characters are copied until the end of input") {
                 REQUIRE(success);
                 REQUIRE(deserializer.consumed() == std::strlen(input));
-                REQUIRE(line.view() == input);
+
+                std::string_view lineView{lineString.view().data(), deserializer.consumed()};
+                REQUIRE(lineView == input);
             }
         }
     }
 
     GIVEN("Input containing CRLF before the end") {
         const char *input = "ABC\r\nDEF";
-        WHEN("Deserialized into Line") {
+        WHEN("Deserialized into LineString") {
             atlink::Utils::Deserializer deserializer{input};
 
-            LineText<16U> line{};
+            LineString<16U> lineString{};
 
-            auto success = deserializer.visit(line);
+            auto success = deserializer.visit(lineString);
 
             THEN("Characters are copied only up to CRLF") {
                 REQUIRE(success);
                 // Only "ABC" is taken before CRLF
                 REQUIRE(3U == deserializer.consumed());
-                REQUIRE(line.view() == "ABC");
+
+                std::string_view lineView{lineString.view().data(), 3U};
+                REQUIRE(lineView == "ABC");
             }
         }
     }
 
-    GIVEN("Input longer than the Line buffer") {
+    GIVEN("Input longer than the LineString buffer") {
         // TODO:
         const char *input = "1234567890";
-        WHEN("Deserialized into a smaller Line buffer") {
+        WHEN("Deserialized into a smaller LineString buffer") {
             atlink::Utils::Deserializer deserializer{input};
 
-            static constexpr size_t LEN{5U};
-            LineText<LEN> line{};
+            LineString<5U> lineString{}; // smaller than input
 
-            auto success = deserializer.visit(line);
+            auto success = deserializer.visit(lineString);
 
             THEN("Only as many characters as fit into the buffer are copied") {
                 REQUIRE(success);
-                REQUIRE(deserializer.consumed() == LEN);
-                REQUIRE(line.view() == std::string_view(input, LEN));
+                REQUIRE(deserializer.consumed() == 5U);
+
+                std::string_view lineView{lineString.view().data(), deserializer.consumed()};
+                REQUIRE(lineView == std::string_view(input, 5U));
             }
         }
     }
@@ -277,14 +295,14 @@ SCENARIO("Enum can be deserialized") {
 
 SCENARIO("Deserializer can be rewound") {
 
-    using atlink::Core::Sequence;
-    Sequence seq{"ABC"};
+    using atlink::Core::Literal;
+    Literal literal{"ABC"};
 
     GIVEN("A deserializer that has already consumed some input") {
         atlink::Utils::Deserializer deserializer{"ABC 123"};
 
-        // Consume the sequence first
-        REQUIRE(deserializer.visit(seq));
+        // Consume the literal first
+        REQUIRE(deserializer.visit(literal));
         REQUIRE(3U == deserializer.consumed());
 
         // Consume the integer to advance further

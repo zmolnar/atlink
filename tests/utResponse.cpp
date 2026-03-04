@@ -29,14 +29,14 @@ class TestResponse : public ATL_NS::Core::Response {
     enum class StrEnum { Five, Six, Seven, Eight, Nine };
 
     int num;
-    ATL_NS::Core::QuotedText<32U> str{};
+    ATL_NS::Core::QuotedString<32U> quotedString{};
     ATL_NS::Core::Enum<IntEnum> intEnum{};
     ATL_NS::Core::Enum<StrEnum> strEnum{};
 
     TestResponse() : ATL_NS::Core::Response("+TEST:") {}
 
     bool accept(ATL_NS::Core::AResponseVisitor &visitor) {
-        return Response::acceptImpl(visitor, num, str, intEnum, strEnum);
+        return Response::acceptImpl(visitor, num, quotedString, intEnum, strEnum);
     }
 };
 
@@ -68,7 +68,7 @@ SCENARIO("Response can accept visitor") {
                 REQUIRE(success);
                 REQUIRE(42U == deserializer.consumed());
                 REQUIRE(322 == testResponse.num);
-                REQUIRE(std::string_view{"input string"} == testResponse.str.view());
+                REQUIRE(std::string_view{"input string"} == testResponse.quotedString.view());
                 REQUIRE(TestResponse::IntEnum::Four == testResponse.intEnum.get());
                 REQUIRE(TestResponse::StrEnum::Five == testResponse.strEnum.get());
             }
@@ -82,7 +82,7 @@ SCENARIO("Response can accept visitor") {
                 REQUIRE(success);
                 REQUIRE(44U == deserializer.consumed());
                 REQUIRE(322 == testResponse.num);
-                REQUIRE(std::string_view{"input string"} == testResponse.str.view());
+                REQUIRE(std::string_view{"input string"} == testResponse.quotedString.view());
                 REQUIRE(TestResponse::IntEnum::Four == testResponse.intEnum.get());
                 REQUIRE(TestResponse::StrEnum::Five == testResponse.strEnum.get());
             }
@@ -97,7 +97,7 @@ SCENARIO("Response can accept visitor") {
                 // original 42 bytes + 3 leading spaces
                 REQUIRE(45U == deserializer.consumed());
                 REQUIRE(322 == testResponse.num);
-                REQUIRE(std::string_view{"input string"} == testResponse.str.view());
+                REQUIRE(std::string_view{"input string"} == testResponse.quotedString.view());
                 REQUIRE(TestResponse::IntEnum::Four == testResponse.intEnum.get());
                 REQUIRE(TestResponse::StrEnum::Five == testResponse.strEnum.get());
             }

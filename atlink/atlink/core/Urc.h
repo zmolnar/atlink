@@ -24,7 +24,7 @@ namespace Core {
 
 class AnyUrc : public Response {
   public:
-    LineText<512U> payload{};
+    LineString<512U> payload{};
 
     AnyUrc() : Response("") {}
 

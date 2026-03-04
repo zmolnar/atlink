@@ -18,7 +18,7 @@
 #pragma once
 
 #include "atlink/core/BasicTypes.h"
-#include "atlink/core/Elements.h"
+#include "atlink/core/Fields.h"
 #include <charconv>
 #include <cstddef>
 #include <type_traits>
@@ -123,7 +123,7 @@ class Logger {
             return *this;
         }
 
-        Line &operator<<(const ATL_NS::Core::AElement &f) {
+        Line &operator<<(const ATL_NS::Core::AField &f) {
             if (enabled) {
                 Core::MutableBuffer rem{buf.data() + len, SIZE - len};
                 const auto n = f.stringify(rem);

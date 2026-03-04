@@ -38,10 +38,10 @@ class Response : public Core::MultiLineResponse {
   public:
     class Manufacturer : Core::Line {
       public:
-        Core::LineText<32U> name{};
+        Core::LineString<32U> lineString{};
 
         bool accept(Core::AResponseVisitor &visitor) override {
-            return Core::Line::acceptImpl(visitor, name);
+            return Core::Line::acceptImpl(visitor, lineString);
         }
     };
     Response() : Core::MultiLineResponse("+ATI:") {}
