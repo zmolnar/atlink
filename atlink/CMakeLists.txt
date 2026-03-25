@@ -7,6 +7,13 @@ set(ATLINK_NAMESPACE "atlink" CACHE STRING "Atlink top-level enclosing namespace
 include(FetchContent)
 
 FetchContent_Declare(
+    typemachine
+    GIT_REPOSITORY https://github.com/zmolnar/typemachine.git
+    GIT_TAG        a40dcefddaed53f547af1361551787b355e1054a
+    SOURCE_SUBDIR  typemachine
+)
+
+FetchContent_Declare(
     magic_enum
     GIT_REPOSITORY https://github.com/Neargye/magic_enum.git
     GIT_TAG        v0.9.7
@@ -20,7 +27,7 @@ FetchContent_Declare(
     FIND_PACKAGE_ARGS NAMES Microsoft.GSL
 )
 
-FetchContent_MakeAvailable(magic_enum gsl)
+FetchContent_MakeAvailable(typemachine magic_enum gsl)
 
 # Header-only library target
 add_library(atlink INTERFACE)
@@ -42,13 +49,14 @@ target_compile_definitions(atlink
 )
 
 target_link_libraries(atlink
-    INTERFACE 
+    INTERFACE
+        typemachine::typemachine
         magic_enum::magic_enum
         Microsoft.GSL::GSL
 )
 
-# Require C++17 for consumers
-target_compile_features(atlink INTERFACE cxx_std_17)
+# Require C++20 for consumers
+target_compile_features(atlink INTERFACE cxx_std_20)
 
 # ---------- Install & Package ----------
 include(CMakePackageConfigHelpers)
@@ -57,7 +65,7 @@ include(CMakePackageConfigHelpers)
 install(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/atlink DESTINATION include)
 
 # Install/export the INTERFACE target
-install(TARGETS atlink magic_enum GSL
+install(TARGETS atlink typemachine magic_enum GSL
     EXPORT atlinkTargets
 )
 

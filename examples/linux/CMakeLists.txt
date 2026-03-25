@@ -30,7 +30,7 @@ target_compile_options(atlink_example_linux PRIVATE
 target_link_libraries(atlink_example_linux PRIVATE atlink::atlink)
 
 set_target_properties(atlink_example_linux PROPERTIES
-    CXX_STANDARD 17
+    CXX_STANDARD 20
     CXX_STANDARD_REQUIRED YES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
