@@ -23,6 +23,7 @@ namespace Core {
 enum class ErrorCode {
     NoError,
     DeviceBusy,
+    DeviceUnavailable,
     InternalError,
 };
 

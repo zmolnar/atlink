@@ -17,9 +17,9 @@
 
 #pragma once
 
-#include <cassert>
-#include <cerrno>
-#include <semaphore.h>
+#include <climits>
+#include <cstddef>
+#include <semaphore>
 
 namespace ATL_NS {
 namespace Platform {
@@ -28,15 +28,9 @@ namespace Linux {
 
 class Semaphore {
   public:
-    explicit Semaphore(uint32_t initial = 0) {
-        int rc = ::sem_init(&sem, 0, initial);
-        assert(rc == 0 && "sem_init failed");
-        (void)rc;
-    }
+    explicit Semaphore(uint32_t initial = 0) : sem{static_cast<std::ptrdiff_t>(initial)} {}
 
-    ~Semaphore() {
-        ::sem_destroy(&sem);
-    }
+    ~Semaphore() = default;
 
     // Non-copyable
     Semaphore(const Semaphore &) = delete;
@@ -45,23 +39,15 @@ class Semaphore {
     Semaphore &operator=(Semaphore &&) = delete;
 
     void acquire() {
-        while (true) {
-            if (::sem_wait(&sem) == 0)
-                return;
-            if (errno == EINTR)
-                continue; // retry on signal
-            assert(false && "sem_wait failed");
-        }
+        sem.acquire();
     }
 
     void release() {
-        int rc = ::sem_post(&sem);
-        assert(rc == 0 && "sem_post failed");
-        (void)rc;
+        sem.release();
     }
 
   private:
-    sem_t sem{};
+    std::counting_semaphore<INT_MAX> sem;
 };
 
 } // namespace Linux

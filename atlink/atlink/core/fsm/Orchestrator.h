@@ -18,113 +18,213 @@
 #pragma once
 
 #include "atlink/core/Urc.h"
-#include "atlink/core/fsm/Commands.h"
-#include "atlink/core/fsm/Context.h"
-#include "atlink/core/fsm/Events.h"
+#include "atlink/core/fsm/AtTransactionFsm.h"
 #include "atlink/platform/Facade.h"
 #include "atlink/utils/Deserializer.h"
 #include "atlink/utils/Overload.h"
 #include "atlink/utils/Serializer.h"
 
-#include "atlink/core/fsm/State.h"
+#include <array>
+#include <cstring>
 
 namespace ATL_NS {
 namespace Core {
 namespace Fsm {
 
-class Orchestrator : public Context, public Platform::Api::Subscriber {
+class Orchestrator : public Platform::Api::Subscriber {
     static constexpr Platform::Timer::Duration coolDownPeriod = std::chrono::milliseconds{20};
 
     Platform::DeviceIO &deviceIO;
     AUrcDispatcher &urcDispatcher;
-    Platform::Mutex mtx{};
-    Platform::CondVar condvar;
-    State::Variant state{State::Idle{this}};
 
-    Platform::MessageQueue<Fsm::Event> events{};
+    Platform::Mutex mtx{};
+    Platform::CondVar condvar{};
+    Platform::MessageQueue<EventVariant> events{};
     Platform::Timer coolDown{};
     Platform::Logger logger{"orchestrator"};
+    bool canSubmitCommand{true};
+    bool stopping{false};
+
+    AtTransactionFsm fsm{std::in_place_type<State::Ready>};
 
     std::array<char, 512U> rxstorage{};
     MutableBuffer rxbuf{rxstorage};
-    size_t leftover{0U};
 
     std::array<char, 512U> txstorage{};
     MutableBuffer txbuf{txstorage};
 
   public:
-    void notify(Platform::Api::Subscriber::Event ev) override {
-        if (Platform::Api::Subscriber::Event::RxReady == ev) {
-            events.put(Fsm::Event::RxReady);
-        }
-    }
-
-    static void timerCallback(void *ctx) {
-        auto *o = static_cast<Orchestrator *>(ctx);
-        o->events.put(Fsm::Event::TxReady);
-    }
-
-    Orchestrator(Platform::DeviceIO &io, AUrcDispatcher &udp)
-        : deviceIO{io}, urcDispatcher{udp} {
+    Orchestrator(Platform::DeviceIO &io, AUrcDispatcher &urc) : deviceIO{io}, urcDispatcher{urc} {
         deviceIO.subscribe(*this);
         coolDown.setHandler(timerCallback, this);
         logger.setLogLevel(Platform::Api::Log::Level::Trace);
     }
 
+    void notify(Platform::Api::Subscriber::Event ev) override {
+        if (ev == Platform::Api::Subscriber::Event::RxReady) {
+            post(EventVariant{Fsm::Event::RxReady{}});
+        }
+    }
+
+    static void timerCallback(void *ctx) {
+        auto *self = static_cast<Orchestrator *>(ctx);
+        self->post(EventVariant{Fsm::Event::TxWindowOpen{}});
+    }
+
     void loop() {
-        while (true) {
+        while (!isStopping()) {
             auto ev = events.get();
-            if (Fsm::Event::ShutDown == ev) {
-                logger.info() << "Shutting down";
-                break;
+            dispatch(ev);
+        }
+        logger.info() << "FSM: shutdown entered";
+    }
+
+    void stop() {
+        post(EventVariant{Fsm::Event::StopRequested{}});
+    }
+
+    void shutDown() {
+        stop();
+    }
+
+    ErrorCode sendCommand(AResponsePack *result, Core::Command *cmd, Response *res) {
+        return sendCommandInternal(result, cmd, res);
+    }
+
+  private:
+    ErrorCode sendCommandInternal(AResponsePack *result, Core::Command *cmd, Response *res) {
+        PendingExchange req{};
+        req.result = result;
+        req.command = cmd;
+        req.response = res;
+
+        ErrorCode ec{ErrorCode::NoError};
+        Platform::Semaphore sem{};
+
+        req.ec = &ec;
+        req.sem = &sem;
+
+        {
+            Platform::Mutex::LockGuard g{mtx};
+
+            while (!canSubmitCommand && !stopping) {
+                condvar.wait(mtx);
+            }
+
+            if (stopping) {
+                ec = ErrorCode::DeviceUnavailable;
             } else {
-                handle(ev);
+                if (canSubmitCommand) {
+                    post(EventVariant{Fsm::Event::RequestSubmitted{req}});
+                }
             }
         }
+
+        if (ErrorCode::NoError == ec) {
+            sem.acquire();
+        }
+
+        return ec;
+    }
+    void post(EventVariant ev) {
+        events.put(std::move(ev));
     }
 
-    void handle(Fsm::Event event) {
-        auto handlers = Utils::Overload{
-            [&](State::Idle &i) -> State::Variant {
-                return i.handle(event);
+    void dispatch(EventVariant const &ev) {
+        std::visit(
+            [&](auto const &concreteEv) {
+                auto actions = fsm.dispatch(concreteEv);
+                execute(actions);
             },
-            [&](State::SendCommand &s) -> State::Variant {
-                return s.handle(event);
-            },
-            [&](State::WaitForResponse &w) -> State::Variant {
-                return w.handle(event);
-            },
-        };
+            ev);
+    }
 
-        Platform::Mutex::LockGuard g{mtx};
-
-        const bool wasIdle = std::holds_alternative<State::Idle>(state);
-
-        auto next = std::visit(handlers, state);
-        state = std::move(next);
-
-        const bool nowIdle = std::holds_alternative<State::Idle>(state);
-
-        if (!wasIdle && nowIdle) {
-            logger.info() << "FSM entered idle state";
-            condvar.notifyAll();
+    void execute(AtTransactionFsm::actions_t const &actions) {
+        for (auto const &action : actions) {
+            std::visit(Utils::Overload{
+                           [&](Action::SendCommand const &act) {
+                               executeSendCommand(act);
+                           },
+                           [&](Action::FinalizeExchange const &act) {
+                               executeFinalizeExchange(act);
+                           },
+                           [&](Action::StartTxWindowTimer const &) {
+                               executeStartTxWindowTimer();
+                           },
+                           [&](Action::WakeCommandWaiters const &) {
+                               wakeCommandWaiters();
+                           },
+                           [&](Action::BlockCommandSubmission const &) {
+                               blockCommandSubmission();
+                           },
+                           [&](Action::HandleUrcs const &) {
+                               handleUrcs();
+                           },
+                           [&](Action::HandleInput const &act) {
+                               handleInput(act);
+                           },
+                           [&](Action::SignalShutdownEntered const &) {
+                               handleShutdownEntered();
+                           },
+                       },
+                       action);
         }
     }
 
-    bool send(const Core::Command &out) override {
+    void handleShutdownEntered() {
+        {
+            Platform::Mutex::LockGuard g{mtx};
+            stopping = true;
+            canSubmitCommand = false;
+        }
+        condvar.notifyAll();
+    }
+
+    void handleUrcs() {
+        dispatchUrcs();
+    }
+
+    void handleInput(Action::HandleInput const &act) {
+        if (nullptr == act.req.result) {
+            post(EventVariant{Fsm::Event::ReplyFailed{ErrorCode::InternalError}});
+            return;
+        }
+
+        if (receive(*act.req.result, act.req.response)) {
+            post(EventVariant{Fsm::Event::ReplyComplete{}});
+        }
+    }
+
+    void executeSendCommand(Action::SendCommand const &act) {
+        if (!send(*act.req.command)) {
+            post(EventVariant{Fsm::Event::ReplyFailed{ErrorCode::InternalError}});
+        }
+    }
+
+    void executeFinalizeExchange(Action::FinalizeExchange const &act) {
+        if (act.req.ec != nullptr) {
+            *act.req.ec = act.ec;
+        }
+
+        if (act.req.sem != nullptr) {
+            act.req.sem->release();
+        }
+    }
+
+    void executeStartTxWindowTimer() {
+        coolDown.start(coolDownPeriod);
+    }
+
+    bool send(const Core::Command &out) {
         auto serializer = Utils::Serializer{txbuf};
         auto success = out.accept(serializer);
         if (success) {
             auto len = serializer.written();
             auto n = deviceIO.write(serializer.output());
 
-            logger.info() << "TX: command sent (" << len << " bytes)";
-
             success = (n == len);
             if (!success) {
                 logger.error() << "TX: write failed (" << n << "/" << len << " bytes)";
-            } else {
-                logger.debug() << "TX: write ok (" << n << " bytes)";
             }
         } else {
             logger.error() << "TX: serialization failed";
@@ -132,10 +232,9 @@ class Orchestrator : public Context, public Platform::Api::Subscriber {
         return success;
     }
 
-    bool receive(AResponsePack &frc, Response *in) override {
-
-        auto n = deviceIO.read(rxbuf.subspan(leftover));
-        auto input = ReadOnlyText{rxbuf.data(), leftover + n};
+    bool receive(AResponsePack &frc, Response *in) {
+        auto n = readIntoRxBuffer();
+        auto input = currentRxInput(n);
 
         auto tryResponse = [](Response *res, ReadOnlyText &txt) -> bool {
             if (res == nullptr) {
@@ -183,7 +282,6 @@ class Orchestrator : public Context, public Platform::Api::Subscriber {
                     continue;
                 }
             }
-
             if (!haveResult) {
                 if (tryResult(frc, input)) {
                     haveResult = true;
@@ -201,40 +299,44 @@ class Orchestrator : public Context, public Platform::Api::Subscriber {
             }
         }
 
-        for (size_t i = 0; i < input.size(); ++i) {
-            rxbuf[i] = input[i];
-        }
-
-        leftover = input.size();
-
-        if (!haveResult || !haveResponse) {
-            logger.trace() << "RX: incomplete response, waiting (buffered=" << leftover
-                           << " bytes)";
-        }
+        commitRxRemainder(input);
 
         return haveResult && haveResponse;
     }
 
-    bool canSend() override {
-        return !coolDown.isRunning();
-    }
-
-    void dispatchUrcs() override {
-
-        auto n = deviceIO.read(rxbuf.subspan(leftover));
-        auto input = ReadOnlyText{rxbuf.data(), leftover + n};
+    void dispatchUrcs() {
+        auto n = readIntoRxBuffer();
+        auto input = currentRxInput(n);
 
         auto consumed = dispatchAllUrcs(input);
         input = input.substr(consumed);
 
-        for (size_t i = 0; i < input.size(); ++i) {
-            rxbuf[i] = input[i];
-        }
-
-        leftover = input.size();
+        commitRxRemainder(input);
     }
 
-    size_t dispatchAllUrcs(ReadOnlyText input) {
+    std::size_t readIntoRxBuffer() {
+        if (rxbuf.empty()) {
+            return 0U;
+        }
+
+        const auto n = deviceIO.read(rxbuf);
+        rxbuf = rxbuf.subspan(n);
+        return n;
+    }
+
+    ReadOnlyText currentRxInput(std::size_t /*newlyRead*/) const {
+        return ReadOnlyText{rxstorage.data(), rxstorage.size() - rxbuf.size()};
+    }
+
+    void commitRxRemainder(ReadOnlyText remainder) {
+        const auto used = remainder.size();
+        if (used > 0U && remainder.data() != rxstorage.data()) {
+            std::memmove(rxstorage.data(), remainder.data(), used);
+        }
+        rxbuf = MutableBuffer{rxstorage}.subspan(used);
+    }
+
+    std::size_t dispatchAllUrcs(ReadOnlyText input) {
         auto n = dispatchSingleUrc(input);
         auto consumed = n;
 
@@ -244,10 +346,6 @@ class Orchestrator : public Context, public Platform::Api::Subscriber {
             consumed += n;
         }
 
-        if (0U < input.size()) {
-            logger.debug() << "URC: trailing partial data (" << input.size() << " bytes buffered)";
-        }
-
         return consumed;
     }
 
@@ -255,47 +353,22 @@ class Orchestrator : public Context, public Platform::Api::Subscriber {
         return urcDispatcher.dispatch(input);
     }
 
-    void shutDown() {
-        events.put(Fsm::Event::ShutDown);
+    void wakeCommandWaiters() {
+        {
+            Platform::Mutex::LockGuard g{mtx};
+            canSubmitCommand = true;
+        }
+        condvar.notifyAll();
     }
 
-    ErrorCode sendCommand(AResponsePack *result, Core::Command *cmd, Response *res) {
-        mtx.lock();
-        while (!std::holds_alternative<State::Idle>(state)) {
-            condvar.wait(mtx);
-        }
+    void blockCommandSubmission() {
+        Platform::Mutex::LockGuard g{mtx};
+        canSubmitCommand = false;
+    }
 
-        ErrorCode ec{ErrorCode::NoError};
-        Platform::Semaphore sem{};
-
-        logger.info() << "FSM: sending command";
-
-        Command::SendCommand payload{};
-        payload.ec = &ec;
-        payload.result = result;
-        payload.command = cmd;
-        payload.response = res;
-        payload.sem = &sem;
-
-        if (auto idle = std::get_if<State::Idle>(&state)) {
-            logger.debug() << "FSM: idle → sendcommand";
-            auto next = idle->process(payload);
-            state = std::move(next);
-        } else {
-            logger.error() << "FSM: not idle after gating — aborting";
-            ec = ErrorCode::InternalError;
-        }
-
-        mtx.unlock();
-
-        if (ErrorCode::NoError == ec) {
-            sem.acquire();
-            logger.info() << "FSM: command completed";
-        } else {
-            logger.error() << "FSM: command failed (" << static_cast<int>(ec) << ")";
-        }
-
-        return ec;
+    bool isStopping() {
+        Platform::Mutex::LockGuard g{mtx};
+        return stopping;
     }
 };
 

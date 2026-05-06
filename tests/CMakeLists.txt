@@ -15,6 +15,7 @@ add_subdirectory(../atlink atlink_build)
 add_executable(atlink_tests
     utDeserializer.cpp
     utEnumStringConverter.cpp
+    utAtTransactionFsm.cpp
     utMultiLineResponse.cpp
     utResponse.cpp
     utResponsePack.cpp
@@ -23,6 +24,10 @@ add_executable(atlink_tests
 )
 
 target_link_libraries(atlink_tests PRIVATE atlink::atlink Catch2::Catch2WithMain)
+
+target_compile_definitions(atlink_tests PRIVATE
+    AT_PLATFORM_LINUX
+)
 
 set_target_properties(atlink_tests PROPERTIES
     CXX_STANDARD 20
